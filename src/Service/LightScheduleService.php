@@ -62,10 +62,6 @@ class LightScheduleService
     {
         $interval = $endTime->diff($startTime);
 
-        $days = $interval->days;
-        $hours = $interval->h + ($days * 24);
-        $minutes = $interval->i;
-
-        return ['days' => $days, 'hours' => $hours, 'minutes' => $minutes];
+        return ['days' => $interval->d, 'hours' => $interval->h, 'minutes' => $interval->i];
     }
 }

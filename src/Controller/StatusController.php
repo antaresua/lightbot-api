@@ -50,7 +50,7 @@ class StatusController extends AbstractController
     {
         try {
             $lastStatus = $this->statusRepository->findLastLightOffStatus();
-//            $this->addStatus(true);
+            $this->addStatus(true);
 
             $currentDateTime = new DateTime('now', new DateTimeZone('Europe/Kiev'));
             $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
@@ -85,7 +85,7 @@ class StatusController extends AbstractController
     {
         try {
             $lastStatus = $this->statusRepository->findLastLightOnStatus();
-//            $this->addStatus(false);
+            $this->addStatus(false);
 
             $currentDateTime = new DateTime('now', new DateTimeZone('Europe/Kiev'));
             $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;

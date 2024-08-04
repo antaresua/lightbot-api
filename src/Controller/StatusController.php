@@ -115,13 +115,19 @@ class StatusController extends AbstractController
 
     private function formatDuration(int $days, int $hours, int $minutes): string
     {
+        $parts = [];
+
         if ($days > 0) {
-            return sprintf("%d дн %d год %d хв", $days, $hours, $minutes);
-        } elseif ($hours > 0) {
-            return sprintf("%d год %d хв", $hours, $minutes);
-        } else {
-            return sprintf("%d хв", $minutes);
+            $parts[] = sprintf("%d дн", $days);
         }
+        if ($hours > 0) {
+            $parts[] = sprintf("%d год", $hours);
+        }
+        if ($minutes > 0) {
+            $parts[] = sprintf("%d хв", $minutes);
+        }
+
+        return implode(' ', $parts);
     }
 
     private function addStatus(bool $isOn): void

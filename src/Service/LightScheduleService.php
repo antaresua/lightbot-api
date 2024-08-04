@@ -31,7 +31,7 @@ class LightScheduleService
     {
         if ($isLightOn === true) {
             $nextOffEvent = $this->timeSlotRepository->findNextOffEvent($currentTime);
-            $nextOnEvent = isset($nextOffEventStart) ? $this->timeSlotRepository->findNextOnEvent(new DateTime($nextOffEvent->getStartTime())) : null;
+            $nextOnEvent = $this->timeSlotRepository->findNextOnEvent($nextOffEvent->getStartTime());
 
             return [
                 'nextOffTimeStart'  => $nextOffEvent->getStartTime()->format('H:i') ?? null,
@@ -40,9 +40,12 @@ class LightScheduleService
         }
 
         if ($isLightOn === false) {
+            // Знаходимо наступне можливе включення
             $nextPossibleOnEvent = $this->timeSlotRepository->findNextPossibleOnEvent($currentTime);
-            $nextOnEvent = $this->timeSlotRepository->findNextOnEvent($currentTime);
-            $nextOffEvent = $this->timeSlotRepository->findNextOffEvent(new DateTime($nextOnEvent->getStartTime()));
+            // далі знаходимо наступне включення після можливого включення
+            $nextOnEvent = $this->timeSlotRepository->findNextOnEvent($nextPossibleOnEvent->getStartTime());
+            // і далі знаходимо наступне вимкнення після включення
+            $nextOffEvent = $this->timeSlotRepository->findNextOffEvent($nextOnEvent->getStartTime());
 
             return [
                 'nextPossibleOnStart'   => $nextPossibleOnEvent->getStartTime()->format('H:i') ?? null,

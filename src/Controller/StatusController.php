@@ -57,7 +57,6 @@ class StatusController extends AbstractController
             $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
             $nextEvent = $this->lightScheduleService->getNextEventData($currentDateTime, true);
-            dd($nextEvent);
 
             $message = $this->formatMessage(
                 $currentDateTime,
@@ -93,7 +92,6 @@ class StatusController extends AbstractController
             $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
             $nextEvent = $this->lightScheduleService->getNextEventData($currentDateTime, false);
-            dd($nextEvent);
 
             $message = $this->formatMessage(
                 $currentDateTime,

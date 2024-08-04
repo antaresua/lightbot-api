@@ -31,36 +31,36 @@ class TimeSlotRepository extends ServiceEntityRepository
     /**
      * Find the next event of a given type after the current time.
      *
-     * @param DateTimeInterface $currentTime
+     * @param DateTimeInterface $time
      * @param string $type
      * @return TimeSlot|null
      * @throws NonUniqueResultException
      */
-    private function findNextEvent(DateTimeInterface $currentTime, string $type): ?TimeSlot
+    private function findNextEvent(DateTimeInterface $time, string $type): ?TimeSlot
     {
-        $currentDayOfWeek = (int) $currentTime->format('w');
-        $currentTimeFormatted = $currentTime->format('H:i:s');
+        $dayOfWeek = (int) $time->format('w');
+        $timeFormatted = $time->format('H:i:s');
 
         // First query: find next event today after the current time
-        $nextEventToday = $this->createQueryBuilder('ts')
+        $nextEvent = $this->createQueryBuilder('ts')
             ->join('ts.startDay', 'sd')
             ->andWhere('ts.type = :type')
             ->andWhere('sd.dayOfWeek = :currentDayOfWeek')
             ->andWhere('ts.startTime > :currentTime')
             ->setParameter('type', $type)
-            ->setParameter('currentDayOfWeek', $currentDayOfWeek)
-            ->setParameter('currentTime', $currentTimeFormatted)
+            ->setParameter('currentDayOfWeek', $dayOfWeek)
+            ->setParameter('currentTime', $timeFormatted)
             ->orderBy('ts.startTime', 'ASC')
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
 
-        if ($nextEventToday !== null) {
-            return $nextEventToday;
+        if ($nextEvent !== null) {
+            return $nextEvent;
         }
 
         // Second query: find the first event on the next day
-        $nextDayOfWeek = ($currentDayOfWeek + 1) % 7;
+        $nextDayOfWeek = ($dayOfWeek + 1) % 7;
 
         return $this->createQueryBuilder('ts')
             ->join('ts.startDay', 'sd')

@@ -1,0 +1,15 @@
+#index:
+#    path: /
+#    controller: App\Controller\DefaultController::index
+
+light_status:
+    resource: '../src/Controller/StatusController.php'
+    type: annotation
+
+day:
+    resource: '../src/Controller/DayController.php'
+    type: annotation
+
+timeslots:
+    resource: '../src/Controller/TimeSlotController.php'
+    type: annotation

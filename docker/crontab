@@ -1,0 +1,1 @@
+* * * * * php /var/www/html/bin/console app:check-host-availability --host=194.28.102.52 --port=555 >> /var/log/cron.log 2>&1

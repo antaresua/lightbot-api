@@ -25,3 +25,5 @@ telegram_token.txt
 telegram_chat_id.txt
 letsencrypt
 docker/nginx/certs
+supervisord.log
+supervisord.pid

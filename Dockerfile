@@ -18,7 +18,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Копіюємо тільки файли залежностей та встановлюємо їх
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Створюємо користувача і групу www для застосунку
 RUN groupadd -g 1000 www && \
@@ -26,6 +25,9 @@ RUN groupadd -g 1000 www && \
 
 # Копіюємо весь проект і встановлюємо права доступу
 COPY --chown=www:www . .
+
+# Встановлюємо всі залежності для проєкту
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Копіюємо конфігурацію supervisord
 COPY docker/supervisord.conf /etc/supervisor/supervisord.conf

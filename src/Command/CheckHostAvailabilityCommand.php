@@ -2,38 +2,41 @@
 
 namespace App\Command;
 
-use Exception;
-use GuzzleHttp\Client;
-use Psr\Log\LoggerInterface;
+use React\EventLoop\LoopInterface;
+use React\Http\Browser;
+use React\Promise\PromiseInterface;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Lock\LockFactory;
-use Symfony\Component\Lock\Store\FlockStore;
+use Psr\Log\LoggerInterface;
+use React\EventLoop\TimerInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Throwable;
 
 class CheckHostAvailabilityCommand extends Command
 {
-    private const API = 'https://bot.bondarenkoid.dev/api/light/';
+    protected static $defaultName = 'app:check-host-availability';
+
+    private const API_STATUS_URL = 'https://bot.bondarenkoid.dev/api/light/status';
+    private const API_CHANGE_STATUS_URL = 'https://bot.bondarenkoid.dev/api/light/';
     private const CHECK_INTERVAL = 10;
-    private const RETRIES_COUNT_OFF = 2;
     private const STATUS_ON = 'on';
     private const STATUS_OFF = 'off';
 
-    protected static $defaultName = 'app:check-host-availability';
-
-    private Client $client;
+    private Browser $browser;
     private LoggerInterface $logger;
-    private LockFactory $lockFactory;
+    private LoopInterface $loop;
+    private ?TimerInterface $timerId = null;
+    private HttpClientInterface $httpClient;
 
-    public function __construct(Client $client, LoggerInterface $logger)
+    public function __construct(HttpClientInterface $httpClient, Browser $browser, LoggerInterface $logger, LoopInterface $loop)
     {
-        $this->client = $client;
+        $this->httpClient = $httpClient;
+        $this->browser = $browser;
         $this->logger = $logger;
-
-        $store = new FlockStore();
-        $this->lockFactory = new LockFactory($store);
-
+        $this->loop = $loop;
         parent::__construct();
     }
 
@@ -41,107 +44,96 @@ class CheckHostAvailabilityCommand extends Command
     {
         $this
             ->setDescription('Checks host availability and updates the status accordingly.')
-            ->addOption('host', null, InputOption::VALUE_REQUIRED, 'The host to check')
-            ->addOption('port', null, InputOption::VALUE_REQUIRED, 'The port to check');
+            ->addArgument('host', InputArgument::REQUIRED, 'The host to check')
+            ->addArgument('port', InputArgument::REQUIRED, 'The port to check');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $host = $input->getOption('host');
-        $port = $input->getOption('port');
+        $host = $input->getArgument('host');
+        $port = $input->getArgument('port');
         $url = "http://{$host}:{$port}";
 
-        $lock = $this->lockFactory->createLock('check-host-availability');
-
-        if (!$lock->acquire()) {
-            $this->logger->info('Another instance of the command is already running.');
-            return Command::SUCCESS;
+        // Ensure only one timer is created
+        if ($this->timerId === null) {
+            $this->timerId = $this->loop->addPeriodicTimer(self::CHECK_INTERVAL, function () use ($url) {
+                $this->checkHostAndStatus($url);
+            });
         }
 
-        try {
-            $this->checkHostEveryTenSeconds($url);
-        } finally {
-            $lock->release();
-        }
+        $this->loop->run();
 
         return Command::SUCCESS;
     }
 
-    private function checkHostEveryTenSeconds(string $url): void
+    private function checkHostAndStatus(string $url): void
     {
-        $startTime = time();
+        $this->checkHostAvailability($url)->then(
+            function (bool $isAvailable) use ($url) {
+                // Fetch the current status and then update it if needed
+                $this->getCurrentStatus()->then(
+                    function (?string $currentStatus) use ($isAvailable) {
+                        if ($currentStatus === null) {
+                            return;
+                        }
 
-        while (time() - $startTime < 60) {
-            $this->checkHost($url);
-            sleep(self::CHECK_INTERVAL);
-        }
-    }
-
-    private function checkHost(string $url): void
-    {
-        $lastStatus = $this->getLastStatus();
-
-        $isAvailable = $this->isHostAvailable($url);
-
-        if ($isAvailable) {
-            if ($lastStatus && $lastStatus['status'] === self::STATUS_OFF) {
-                // Host is available and last status was OFF
-                $this->changeStatus(self::STATUS_ON);
-            }
-        } else {
-            if ($lastStatus && $lastStatus['status'] === self::STATUS_ON) {
-                // Host is not available and last status was ON
-                for ($i = 0; $i < self::RETRIES_COUNT_OFF; $i++) {
-                    sleep(self::CHECK_INTERVAL);
-                    $isAvailable = $this->retryCheck($url);
-
-                    if ($isAvailable) {
-                        break;
+                        if ($currentStatus === self::STATUS_ON && !$isAvailable) {
+                            $this->updateStatus(self::STATUS_OFF);
+                            $this->logger->info('Host is DOWN, but status is ON. Updating status to OFF.');
+                        } elseif ($currentStatus === self::STATUS_OFF && $isAvailable) {
+                            $this->logger->info('Host is UP, but status is OFF. Updating status to ON.');
+                            $this->updateStatus(self::STATUS_ON);
+                        }
                     }
-                }
-
-                if (!$isAvailable) {
-                    $this->changeStatus(self::STATUS_OFF);
-                }
+                )->catch(function (Throwable $e) {
+                    $this->logger->error('Error fetching current status: ' . $e->getMessage());
+                });
             }
-        }
+        )->catch(function (Throwable $e) use ($url) {
+            $this->logger->error('Error checking host availability at ' . $url . ': ' . $e->getMessage());
+        });
     }
 
-    private function getLastStatus(): ?array
+    private function checkHostAvailability(string $url): PromiseInterface
     {
-        try {
-            $lastStatusJson = $this->client->request('GET', self::API . 'status')->getBody()->getContents();
-            return json_decode($lastStatusJson, true);
-        } catch (Exception $e) {
-            $this->logger->error('Failed to get last status: ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    private function isHostAvailable(string $url): bool
-    {
-        try {
-            $response = $this->client->request('GET', $url, ['timeout' => 5]);
-            return $response->getStatusCode() === 200;
-        } catch (Exception $e) {
-            $this->logger->info("Host is down: " . $e->getMessage());
+        return $this->browser->get($url)->then(
+            function ($response) {
+                $statusCode = $response->getStatusCode();
+                return $statusCode === 200;
+            }
+        )->catch(function (Throwable $e) use ($url) {
             return false;
-        }
+        });
     }
 
-    private function retryCheck(string $url): bool
+    private function getCurrentStatus(): PromiseInterface
     {
-        return $this->isHostAvailable($url);
+        return $this->browser->get(self::API_STATUS_URL)->then(
+            function ($response) {
+                $data = json_decode((string)$response->getBody(), true);
+                return $data['status'] ?? null;
+            }
+        )->catch(function (Throwable $e) {
+            $this->logger->error('Error fetching current status: ' . $e->getMessage());
+            return null;
+        });
     }
 
-    private function changeStatus(string $status): void
+    private function updateStatus(string $newStatus): void
     {
-        $endpoint = self::API . $status;
+        $url = self::API_CHANGE_STATUS_URL . $newStatus;
+
+        $newStatus = strtoupper($newStatus);
         try {
-            $this->client->request('POST', $endpoint);
-            $this->logger->info("Status changed to $status.");
-        } catch (Exception $e) {
-            $this->logger->error("Failed to change status to $status: " . $e->getMessage());
+            $response = $this->httpClient->request('POST', $url);
+            $statusCode = $response->getStatusCode();
+            if ($statusCode === 200) {
+                $this->logger->info("Status updated to $newStatus successfully.");
+            } else {
+                $this->logger->error("Failed to update status to $newStatus. Response code: " . $statusCode);
+            }
+        } catch (ExceptionInterface $e) {
+            $this->logger->error("Failed to update status to $newStatus: " . $e->getMessage());
         }
     }
 }

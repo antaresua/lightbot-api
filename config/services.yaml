@@ -33,6 +33,11 @@ services:
         arguments:
             $timeSlotRepository: '@App\Repository\TimeSlotRepository'
 
-    GuzzleHttp\Client:
+    React\Http\Browser:
         arguments:
-            - { timeout: 5 }
+            - '@React\EventLoop\LoopInterface'
+        public: true
+
+    React\EventLoop\LoopInterface:
+        class: React\EventLoop\StreamSelectLoop
+        public: true

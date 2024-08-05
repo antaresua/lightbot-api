@@ -2,12 +2,10 @@
 
 namespace App\Service;
 
+use App\Entity\TimeSlot;
 use App\Repository\TimeSlotRepository;
-use DateTime;
-use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\ORM\NonUniqueResultException;
-use Exception;
 
 class LightScheduleService
 {
@@ -25,37 +23,56 @@ class LightScheduleService
      *
      * @return array
      * @throws NonUniqueResultException
-     * @throws Exception
      */
     public function getNextEventData(DateTimeInterface $currentTime, bool $isLightOn): array
     {
+        $dayOfWeek = (int)$currentTime->format('w');
+        $timeFormatted = $currentTime->format('H:i:s');
+
         if ($isLightOn === true) {
-            $nextOffEvent = $this->timeSlotRepository->findNextOffEvent($currentTime);
-            $nextOnEvent = $this->timeSlotRepository->findNextOnEvent($nextOffEvent->getStartTime());
+            $nextOffEvent = $this->findNextEvent($dayOfWeek, TimeSlot::TYPE_OFF, $timeFormatted);
+            $nextOnEvent = $this->findNextEvent($nextOffEvent->getStartDay()->getDayOfWeek(), TimeSlot::TYPE_ON, $nextOffEvent->getStartTime()->format('H:i:s'));
 
             return [
-                'nextOffTimeStart'  => $nextOffEvent->getStartTime()->format('H:i') ?? null,
-                'nextOffTimeEnd'    => $nextOnEvent->getStartTime()->format('H:i') ?? null,
+                'nextOffTimeStart' => $nextOffEvent->getStartTime()->format('H:i') ?? null,
+                'nextOffTimeEnd' => $nextOnEvent->getStartTime()->format('H:i') ?? null,
             ];
         }
 
         if ($isLightOn === false) {
-            // Знаходимо наступне можливе включення
-            $nextPossibleOnEvent = $this->timeSlotRepository->findNextPossibleOnEvent($currentTime);
-            // далі знаходимо наступне включення після можливого включення
-            $nextOnEvent = $this->timeSlotRepository->findNextOnEvent($nextPossibleOnEvent->getStartTime());
-            // і далі знаходимо наступне вимкнення після включення
-            $nextOffEvent = $this->timeSlotRepository->findNextOffEvent($nextOnEvent->getStartTime());
+            $nextPossibleOnEvent = $this->findNextEvent($dayOfWeek, TimeSlot::TYPE_POSSIBLE_ON, $timeFormatted);
+            $nextOnEvent = $this->findNextEvent($nextPossibleOnEvent->getStartDay()->getDayOfWeek(), TimeSlot::TYPE_ON, $nextPossibleOnEvent->getStartTime()->format('H:i:s'));
+            $nextOffEvent = $this->findNextEvent($nextOnEvent->getStartDay()->getDayOfWeek(), TimeSlot::TYPE_OFF, $nextOnEvent->getStartTime()->format('H:i:s'));
 
             return [
-                'nextPossibleOnStart'   => $nextPossibleOnEvent->getStartTime()->format('H:i') ?? null,
-                'nextPossibleOnEnd'     => $nextOnEvent->getStartTime()->format('H:i') ?? null,
+                'nextPossibleOnStart' => $nextPossibleOnEvent->getStartTime()->format('H:i') ?? null,
+                'nextPossibleOnEnd' => $nextOnEvent->getStartTime()->format('H:i') ?? null,
                 'nextGuaranteedOnStart' => $nextOnEvent->getStartTime()->format('H:i') ?? null,
-                'nextGuaranteedOnEnd'   => $nextOffEvent->getStartTime()->format('H:i') ?? null,
+                'nextGuaranteedOnEnd' => $nextOffEvent->getStartTime()->format('H:i') ?? null,
             ];
         }
 
         return [];
+    }
+
+    /**
+     * @param int $dayOfWeek
+     * @param string $type
+     * @param string $time
+     * @return TimeSlot|null
+     * @throws NonUniqueResultException
+     */
+    private function findNextEvent(int $dayOfWeek, string $type, string $time): ?TimeSlot
+    {
+        $nextEvent = $this->timeSlotRepository->findNextEvent($dayOfWeek, $type, $time);
+
+        if ($nextEvent !== null) {
+            return $nextEvent;
+        }
+
+        $nextDayOfWeek = ($dayOfWeek + 1) % 7;
+
+        return $this->timeSlotRepository->findNextEvent($nextDayOfWeek, $type);
     }
 
     public function calculateDuration(DateTimeInterface $startTime, DateTimeInterface $endTime): array

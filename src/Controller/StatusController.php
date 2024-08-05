@@ -147,7 +147,7 @@ class StatusController extends AbstractController
                 return sprintf(
                     "🟢 Світло з'явилося о *%s*\n🕓 Його не було *%s*\n📅 Наступне відключення: з *%s* по *%s*",
                     $currentDateTime->format('H:i'),
-                    $duration,
+                    empty($duration) ? '0 хв' : $duration,
                     $nextEvent['nextOffTimeStart'],
                     $nextEvent['nextOffTimeEnd']
                 );
@@ -155,7 +155,7 @@ class StatusController extends AbstractController
                 return sprintf(
                     "🟢 Світло з'явилося о *%s*\n🕓 Його не було *%s*",
                     $currentDateTime->format('H:i'),
-                    $duration
+                    empty($duration) ? '0 хв' : $duration
                 );
             }
         }
@@ -164,7 +164,7 @@ class StatusController extends AbstractController
                 return sprintf(
                     "🔴 Світло зникло о *%s*\n🕓 Воно було *%s*\n🗓 Наступне включення: *%s* \- *%s*\n⚠️ Можливе включення з *%s* по *%s*",
                     $currentDateTime->format('H:i'),
-                    $duration,
+                    empty($duration) ? '0 хв' : $duration,
                     $nextEvent['nextGuaranteedOnStart'],
                     $nextEvent['nextGuaranteedOnEnd'],
                     $nextEvent['nextPossibleOnStart'],
@@ -174,7 +174,7 @@ class StatusController extends AbstractController
                 return sprintf(
                     "🔴 Світло зникло о *%s*\n🕓 Воно було *%s*",
                     $currentDateTime->format('H:i'),
-                    $duration
+                    empty($duration) ? '0 хв' : $duration,
                 );
             }
         }

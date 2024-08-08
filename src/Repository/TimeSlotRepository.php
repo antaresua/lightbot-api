@@ -31,10 +31,6 @@ class TimeSlotRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param int $dayOfWeek
-     * @param string $type
-     * @param string $time
-     * @return TimeSlot|null
      * @throws NonUniqueResultException
      */
     public function findNextEvent(int $dayOfWeek, string $type, string $time = '00:00:00'): ?TimeSlot

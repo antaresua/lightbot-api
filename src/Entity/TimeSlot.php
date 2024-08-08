@@ -10,13 +10,15 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class TimeSlot
 {
-    const TYPE_ON = 'on';
-    const TYPE_OFF = 'off';
-    const TYPE_POSSIBLE_ON = 'possible_on';
+    public const TYPE_ON = 'on';
+    public const TYPE_OFF = 'off';
+    public const TYPE_POSSIBLE_ON = 'possible_on';
 
     /**
      * @ORM\Id
+     *
      * @ORM\GeneratedValue
+     *
      * @ORM\Column(type="integer")
      */
     private $id;

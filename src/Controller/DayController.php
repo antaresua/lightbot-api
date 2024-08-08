@@ -63,7 +63,7 @@ class DayController extends AbstractController
     public function create(Request $request): JsonResponse
     {
         // Отримуємо JSON дані з запиту
-        $data = json_decode($request->getContent(), true);
+        $data = $this->serializer->decode($request->getContent(), 'json');
 
         // Перевіряємо, чи це масив і чи містить він дні з необхідними полями
         if (!is_array($data) || empty($data) || !isset($data[0]['dayOfWeek']) || !isset($data[0]['name'])) {
@@ -95,7 +95,6 @@ class DayController extends AbstractController
         return JsonResponse::fromJsonString($responseData, 201);
     }
 
-
     /**
      * @Route("/{id}", methods={"PUT"})
      */
@@ -107,7 +106,7 @@ class DayController extends AbstractController
             return new JsonResponse(['message' => 'Day not found'], 404);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data = $this->serializer->decode($request->getContent(), true);
 
         $day->setDayOfWeek($data['dayOfWeek']);
         $day->setName($data['name']);

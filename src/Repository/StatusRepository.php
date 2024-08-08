@@ -69,4 +69,18 @@ class StatusRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * @return Status[]
+     */
+    public function findInDateRange(\DateTimeInterface $start, \DateTimeInterface $end): array
+    {
+        $qb = $this->createQueryBuilder('s');
+
+        return $qb->where('s.createdAt BETWEEN :start AND :end')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getQuery()
+            ->getResult();
+    }
 }

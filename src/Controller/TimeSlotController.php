@@ -42,7 +42,7 @@ class TimeSlotController extends AbstractController
      */
     public function create(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        $data = $this->serializer->decode($request->getContent(), 'json');
 
         if (!is_array($data) || empty($data)) {
             return new JsonResponse(['message' => 'Invalid input'], 400);
@@ -167,7 +167,7 @@ class TimeSlotController extends AbstractController
             return new JsonResponse(['message' => 'TimeSlot not found'], 404);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data = $this->serializer->decode($request->getContent(), true);
 
         $timeSlot->setStartTime(\DateTime::createFromFormat('H:i', $data['startTime']));
         $timeSlot->setEndTime(\DateTime::createFromFormat('H:i', $data['endTime']));

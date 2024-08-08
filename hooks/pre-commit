@@ -1,0 +1,26 @@
+#!/bin/sh
+
+# Визначаємо директорію проєкту
+PROJECT_DIR=$(git rev-parse --show-toplevel)
+
+# Отримуємо список змінених PHP файлів, які додані до індексації
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.php$')
+
+# Якщо є змінені файли, виконуємо перевірку
+if [ -n "$STAGED_FILES" ]; then
+    echo "Running PHP CS Fixer..."
+
+    # Запускаємо PHP CS Fixer для перевірки змінених файлів
+    php "$PROJECT_DIR/vendor/bin/php-cs-fixer" fix --config="$PROJECT_DIR/.php-cs-fixer.php" --verbose --dry-run --using-cache=no $STAGED_FILES
+
+    # Перевіряємо результат виконання PHP CS Fixer
+    if [ $? -ne 0 ]; then
+        echo "PHP CS Fixer found issues. Please fix them before committing."
+        exit 1
+    else
+        echo "All PHP files passed the coding standards check."
+    fi
+fi
+
+# Якщо немає помилок, дозволяємо коміт
+exit 0

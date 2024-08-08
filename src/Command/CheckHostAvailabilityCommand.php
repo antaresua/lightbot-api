@@ -2,18 +2,18 @@
 
 namespace App\Command;
 
+use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
+use React\EventLoop\TimerInterface;
 use React\Http\Browser;
 use React\Promise\PromiseInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Psr\Log\LoggerInterface;
-use React\EventLoop\TimerInterface;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Throwable;
 
 class CheckHostAvailabilityCommand extends Command
 {
@@ -30,9 +30,16 @@ class CheckHostAvailabilityCommand extends Command
     private LoopInterface $loop;
     private ?TimerInterface $timerId = null;
     private HttpClientInterface $httpClient;
+    private SerializerInterface $serializer;
 
-    public function __construct(HttpClientInterface $httpClient, Browser $browser, LoggerInterface $logger, LoopInterface $loop)
-    {
+    public function __construct(
+        SerializerInterface $serializer,
+        HttpClientInterface $httpClient,
+        Browser $browser,
+        LoggerInterface $logger,
+        LoopInterface $loop
+    ) {
+        $this->serializer = $serializer;
         $this->httpClient = $httpClient;
         $this->browser = $browser;
         $this->logger = $logger;
@@ -55,7 +62,7 @@ class CheckHostAvailabilityCommand extends Command
         $url = "http://{$host}:{$port}";
 
         // Ensure only one timer is created
-        if ($this->timerId === null) {
+        if (null === $this->timerId) {
             $this->timerId = $this->loop->addPeriodicTimer(self::CHECK_INTERVAL, function () use ($url) {
                 $this->checkHostAndStatus($url);
             });
@@ -69,28 +76,28 @@ class CheckHostAvailabilityCommand extends Command
     private function checkHostAndStatus(string $url): void
     {
         $this->checkHostAvailability($url)->then(
-            function (bool $isAvailable) use ($url) {
+            function (bool $isAvailable) {
                 // Fetch the current status and then update it if needed
                 $this->getCurrentStatus()->then(
                     function (?string $currentStatus) use ($isAvailable) {
-                        if ($currentStatus === null) {
+                        if (null === $currentStatus) {
                             return;
                         }
 
-                        if ($currentStatus === self::STATUS_ON && !$isAvailable) {
+                        if (self::STATUS_ON === $currentStatus && !$isAvailable) {
                             $this->updateStatus(self::STATUS_OFF);
                             $this->logger->info('Host is DOWN, but status is ON. Updating status to OFF.');
-                        } elseif ($currentStatus === self::STATUS_OFF && $isAvailable) {
+                        } elseif (self::STATUS_OFF === $currentStatus && $isAvailable) {
                             $this->logger->info('Host is UP, but status is OFF. Updating status to ON.');
                             $this->updateStatus(self::STATUS_ON);
                         }
                     }
-                )->catch(function (Throwable $e) {
-                    $this->logger->error('Error fetching current status: ' . $e->getMessage());
+                )->catch(function (\Throwable $e) {
+                    $this->logger->error('Error fetching current status: '.$e->getMessage());
                 });
             }
-        )->catch(function (Throwable $e) use ($url) {
-            $this->logger->error('Error checking host availability at ' . $url . ': ' . $e->getMessage());
+        )->catch(function (\Throwable $e) use ($url) {
+            $this->logger->error('Error checking host availability at '.$url.': '.$e->getMessage());
         });
     }
 
@@ -99,9 +106,10 @@ class CheckHostAvailabilityCommand extends Command
         return $this->browser->get($url)->then(
             function ($response) {
                 $statusCode = $response->getStatusCode();
-                return $statusCode === 200;
+
+                return 200 === $statusCode;
             }
-        )->catch(function (Throwable $e) use ($url) {
+        )->catch(function (\Throwable $e) {
             return false;
         });
     }
@@ -110,30 +118,32 @@ class CheckHostAvailabilityCommand extends Command
     {
         return $this->browser->get(self::API_STATUS_URL)->then(
             function ($response) {
-                $data = json_decode((string)$response->getBody(), true);
+                $data = $this->serializer->decode((string) $response->getBody(), true);
+
                 return $data['status'] ?? null;
             }
-        )->catch(function (Throwable $e) {
-            $this->logger->error('Error fetching current status: ' . $e->getMessage());
+        )->catch(function (\Throwable $e) {
+            $this->logger->error('Error fetching current status: '.$e->getMessage());
+
             return null;
         });
     }
 
     private function updateStatus(string $newStatus): void
     {
-        $url = self::API_CHANGE_STATUS_URL . $newStatus;
+        $url = self::API_CHANGE_STATUS_URL.$newStatus;
 
         $newStatus = strtoupper($newStatus);
         try {
             $response = $this->httpClient->request('POST', $url);
             $statusCode = $response->getStatusCode();
-            if ($statusCode === 200) {
+            if (200 === $statusCode) {
                 $this->logger->info("Status updated to $newStatus successfully.");
             } else {
-                $this->logger->error("Failed to update status to $newStatus. Response code: " . $statusCode);
+                $this->logger->error("Failed to update status to $newStatus. Response code: ".$statusCode);
             }
         } catch (ExceptionInterface $e) {
-            $this->logger->error("Failed to update status to $newStatus: " . $e->getMessage());
+            $this->logger->error("Failed to update status to $newStatus: ".$e->getMessage());
         }
     }
 }

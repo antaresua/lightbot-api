@@ -2,21 +2,24 @@
 
 namespace App\Controller;
 
+use App\DTO\DateRangeDTO;
+use App\DTO\StatusDTO;
 use App\Entity\Status;
-use App\Service\LightScheduleService;
 use App\Repository\StatusRepository;
+use App\Service\LightScheduleService;
 use App\Service\TelegramService;
-use DateTime;
-
-use DateTimeInterface;
-use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class StatusController extends AbstractController
 {
@@ -28,19 +31,24 @@ class StatusController extends AbstractController
     private EntityManagerInterface $em;
     private TelegramService $telegramService;
     private LoggerInterface $logger;
+    private SerializerInterface $serializer;
 
     public function __construct(
-        TelegramService $telegramService,
-        LightScheduleService $lightScheduleService,
-        StatusRepository $statusRepository,
         EntityManagerInterface $em,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        TelegramService $telegramService,
+        StatusRepository $statusRepository,
+        LightScheduleService $lightScheduleService
     ) {
-        $this->telegramService = $telegramService;
-        $this->lightScheduleService = $lightScheduleService;
-        $this->statusRepository = $statusRepository;
         $this->em = $em;
         $this->logger = $logger;
+        $this->telegramService = $telegramService;
+        $this->statusRepository = $statusRepository;
+        $this->lightScheduleService = $lightScheduleService;
+        $this->serializer = new Serializer(
+            [new ObjectNormalizer(), new DateTimeNormalizer()],
+            [new JsonEncoder()]
+        );
     }
 
     /**
@@ -52,7 +60,7 @@ class StatusController extends AbstractController
             $lastStatus = $this->statusRepository->findLastLightOffStatus();
             $this->addStatus(true);
 
-            $currentDateTime = new DateTime('now', new DateTimeZone('Europe/Kiev'));
+            $currentDateTime = new \DateTime('now', new \DateTimeZone('Europe/Kiev'));
             $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
             $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
@@ -87,7 +95,7 @@ class StatusController extends AbstractController
             $lastStatus = $this->statusRepository->findLastLightOnStatus();
             $this->addStatus(false);
 
-            $currentDateTime = new DateTime('now', new DateTimeZone('Europe/Kiev'));
+            $currentDateTime = new \DateTime('now', new \DateTimeZone('Europe/Kiev'));
             $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
             $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
@@ -118,13 +126,13 @@ class StatusController extends AbstractController
         $parts = [];
 
         if ($days > 0) {
-            $parts[] = sprintf("%d дн", $days);
+            $parts[] = sprintf('%d дн', $days);
         }
         if ($hours > 0) {
-            $parts[] = sprintf("%d год", $hours);
+            $parts[] = sprintf('%d год', $hours);
         }
         if ($minutes > 0) {
-            $parts[] = sprintf("%d хв", $minutes);
+            $parts[] = sprintf('%d хв', $minutes);
         }
 
         return implode(' ', $parts);
@@ -140,9 +148,9 @@ class StatusController extends AbstractController
         $this->em->flush();
     }
 
-    private function formatMessage(DateTimeInterface $currentDateTime, int $type = self::TYPE_ERROR, string $duration = '', array $nextEvent = []): ?string
+    private function formatMessage(\DateTimeInterface $currentDateTime, int $type = self::TYPE_ERROR, string $duration = '', array $nextEvent = []): ?string
     {
-        if ($type === self::TYPE_ON) {
+        if (self::TYPE_ON === $type) {
             if (isset($nextEvent['nextOffTimeStart'], $nextEvent['nextOffTimeEnd'])) {
                 return sprintf(
                     "🟢 Світло з'явилося о *%s*\n🕓 Його не було *%s*\n📅 Наступне відключення: з *%s* по *%s*",
@@ -159,7 +167,7 @@ class StatusController extends AbstractController
                 );
             }
         }
-        if ($type === self::TYPE_OFF) {
+        if (self::TYPE_OFF === $type) {
             if (isset($nextEvent['nextGuaranteedOnStart'], $nextEvent['nextGuaranteedOnEnd'], $nextEvent['nextPossibleOnStart'], $nextEvent['nextPossibleOnEnd'])) {
                 return sprintf(
                     "🔴 Світло зникло о *%s*\n🕓 Воно було *%s*\n🗓 Наступне включення: *%s* \- *%s*\n⚠️ Можливе включення з *%s* по *%s*",
@@ -179,7 +187,7 @@ class StatusController extends AbstractController
             }
         }
 
-        return "Щось зламалось. Адмін уже займається питанням...";
+        return 'Щось зламалось. Адмін уже займається питанням...';
     }
 
     /**
@@ -194,14 +202,38 @@ class StatusController extends AbstractController
                 return new JsonResponse(['message' => 'No status available'], Response::HTTP_NOT_FOUND);
             }
 
-            $statusData = [
-                'status' => $lastStatus->isOn() ? 'on' : 'off',
-                'changeTime' => $lastStatus->getCreatedAt()->format('Y-m-d H:i:s')
-            ];
+            $status = new StatusDTO($lastStatus->getId(), $lastStatus->isOn() ? 'on' : 'off', $lastStatus->getCreatedAt());
 
-            return new JsonResponse($statusData, Response::HTTP_OK);
+            return new JsonResponse($status, Response::HTTP_OK);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * @Route("/api/light/statuses", name="light_statuses_for_date_range", methods={"POST"})
+     */
+    public function getStatusesForDateRange(Request $request): JsonResponse
+    {
+        /** @var DateRangeDTO $data */
+        $data = $this->serializer->deserialize(
+            $request->getContent(),
+            DateRangeDTO::class,
+            'json',
+            [DateTimeNormalizer::FORMAT_KEY => 'Y-m-d H:i:s']
+        );
+
+        $statuses = $this->statusRepository->findInDateRange($data->start, $data->end);
+
+        $responseData = [];
+        foreach ($statuses as $status) {
+            $responseData[] = new StatusDTO(
+                $status->getId(),
+                $status->isOn() ? 'on' : 'off',
+                $status->getCreatedAt()->format('Y-m-d H:i:s')
+            );
+        }
+
+        return new JsonResponse($responseData);
     }
 }

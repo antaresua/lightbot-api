@@ -49,6 +49,7 @@
         "twig/twig": "^2.12|^3.0"
     },
     "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.62",
         "phpunit/phpunit": "^9.5",
         "symfony/browser-kit": "5.4.*",
         "symfony/css-selector": "5.4.*",
@@ -91,10 +92,14 @@
             "assets:install %PUBLIC_DIR%": "symfony-cmd"
         },
         "post-install-cmd": [
-            "@auto-scripts"
+            "@auto-scripts",
+            "cp -R hooks/* .git/hooks/",
+            "chmod +x .git/hooks/pre-commit"
         ],
         "post-update-cmd": [
-            "@auto-scripts"
+            "@auto-scripts",
+            "cp -R hooks/* .git/hooks/",
+            "chmod +x .git/hooks/pre-commit"
         ]
     },
     "conflict": {

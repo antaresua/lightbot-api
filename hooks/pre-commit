@@ -10,15 +10,17 @@ STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.php$')
 if [ -n "$STAGED_FILES" ]; then
     echo "Running PHP CS Fixer..."
 
-    # Запускаємо PHP CS Fixer для перевірки змінених файлів
-    php "$PROJECT_DIR/vendor/bin/php-cs-fixer" fix --config="$PROJECT_DIR/.php-cs-fixer.php" --verbose --dry-run --using-cache=no $STAGED_FILES
+    # Запускаємо PHP CS Fixer для перевірки та виправлення тільки доданих до індексації файлів
+    php "$PROJECT_DIR/vendor/bin/php-cs-fixer" fix --config="$PROJECT_DIR/.php-cs-fixer.php" --verbose --using-cache=no $STAGED_FILES
+
+    # Повторно додаємо виправлені файли до індексації
+    git add $STAGED_FILES
 
     # Перевіряємо результат виконання PHP CS Fixer
-    if [ $? -ne 0 ]; then
-        echo "PHP CS Fixer found issues. Please fix them before committing."
+    FIXER_STATUS=$?
+    if [ $FIXER_STATUS -ne 0 ]; then
+        echo "PHP CS Fixer found issues and attempted to fix them. Please review changes before committing."
         exit 1
-    else
-        echo "All PHP files passed the coding standards check."
     fi
 fi
 

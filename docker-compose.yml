@@ -17,7 +17,7 @@ services:
         networks:
             - app-network
         environment:
-            APP_ENV: dev
+            APP_ENV: prod
         depends_on:
             - db
 

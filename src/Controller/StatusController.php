@@ -202,7 +202,7 @@ class StatusController extends AbstractController
                 return new JsonResponse(['message' => 'No status available'], Response::HTTP_NOT_FOUND);
             }
 
-            $status = new StatusDTO($lastStatus->getId(), $lastStatus->isOn() ? 'on' : 'off', $lastStatus->getCreatedAt());
+            $status = new StatusDTO($lastStatus->getId(), $lastStatus->isOn() ? 'on' : 'off', $lastStatus->getCreatedAt()->format('Y-m-d H:i:s'));
 
             return new JsonResponse($status, Response::HTTP_OK);
         } catch (\Exception $e) {

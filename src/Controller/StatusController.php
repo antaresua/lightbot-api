@@ -215,7 +215,7 @@ class StatusController extends AbstractController
      */
     public function getStatuses(): JsonResponse
     {
-        $statuses = $this->statusRepository->findAll();
+        $statuses = $this->statusRepository->findBy([], ['createdAt' => 'DESC']);
         $statusDTOs = array_map(function ($status) {
             return new StatusDTO($status->getId(), $status->isOn() ? 'on' : 'off', $status->getCreatedAt()->format('Y-m-d H:i:s'));
         }, $statuses);

@@ -3,7 +3,10 @@
 namespace App\Command;
 
 use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Exception\TransferException;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
@@ -27,7 +30,7 @@ class CheckHostAvailabilityCommand extends Command
     private LoopInterface $loop;
     private ?TimerInterface $timerId = null;
     private ClientInterface $httpClient;
-    private ?string $lastKnownStatus = null;
+    private bool $unableToConnectLastTime = false;
     private SerializerInterface $serializer;
 
     public function __construct(
@@ -72,17 +75,17 @@ class CheckHostAvailabilityCommand extends Command
     private function checkHostAndStatus(string $url): void
     {
         $isAvailable = $this->checkHostAvailability($url);
+        $hostStatus = $isAvailable ? self::STATUS_ON : self::STATUS_OFF;
         $currentStatus = $this->getCurrentStatus();
 
-        if (null !== $currentStatus && $currentStatus !== $this->lastKnownStatus) {
-            if ($isAvailable && self::STATUS_OFF === $currentStatus) {
-                $this->updateStatus(self::STATUS_ON);
+        if ($hostStatus !== $currentStatus) {
+            if (self::STATUS_ON === $hostStatus) {
                 $this->logger->info('Host is UP, updating status to ON.');
-            } elseif (!$isAvailable && self::STATUS_ON === $currentStatus) {
-                $this->updateStatus(self::STATUS_OFF);
+                $this->updateStatus(self::STATUS_ON);
+            } else {
                 $this->logger->info('Host is DOWN, updating status to OFF.');
+                $this->updateStatus(self::STATUS_OFF);
             }
-            $this->lastKnownStatus = $currentStatus;
         }
     }
 
@@ -94,9 +97,27 @@ class CheckHostAvailabilityCommand extends Command
                 'connect_timeout' => 2, // Час очікування з'єднання
             ]);
 
+            $this->unableToConnectLastTime = false;
+
             return 200 === $response->getStatusCode();
-        } catch (GuzzleException $e) {
-            $this->logger->error('Error checking host availability: '.$e->getMessage());
+        } catch (ConnectException $e) {
+            if (!$this->unableToConnectLastTime) {
+                $this->logger->info('Unable to connect to the host...');
+            }
+
+            $this->unableToConnectLastTime = true;
+
+            return false;
+        } catch (ServerException $e) {
+            $this->logger->error('Server error: '.$e->getMessage());
+
+            return false;
+        } catch (ClientException $e) {
+            $this->logger->error('Client error: '.$e->getMessage());
+
+            return false;
+        } catch (TransferException $e) {
+            $this->logger->error('Transfer error: '.$e->getMessage());
 
             return false;
         }
@@ -109,7 +130,7 @@ class CheckHostAvailabilityCommand extends Command
             $data = $this->serializer->decode($response->getBody()->getContents(), 'json');
 
             return $data['status'] ?? null;
-        } catch (GuzzleException $e) {
+        } catch (TransferException $e) {
             $this->logger->error('Error fetching current status: '.$e->getMessage());
 
             return null;
@@ -119,6 +140,7 @@ class CheckHostAvailabilityCommand extends Command
     private function updateStatus(string $newStatus): void
     {
         $url = self::API_CHANGE_STATUS_URL.$newStatus;
+        $newStatus = strtoupper($newStatus);
 
         try {
             $response = $this->httpClient->request('POST', $url);
@@ -128,7 +150,7 @@ class CheckHostAvailabilityCommand extends Command
             } else {
                 $this->logger->error("Failed to update status to $newStatus. Response code: ".$statusCode);
             }
-        } catch (GuzzleException $e) {
+        } catch (TransferException $e) {
             $this->logger->error("Failed to update status to $newStatus: ".$e->getMessage());
         }
     }

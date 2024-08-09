@@ -2,6 +2,8 @@
 
 namespace App\Command;
 
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
@@ -9,8 +11,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class CheckHostAvailabilityCommand extends Command
 {
@@ -25,14 +26,17 @@ class CheckHostAvailabilityCommand extends Command
     private LoggerInterface $logger;
     private LoopInterface $loop;
     private ?TimerInterface $timerId = null;
-    private HttpClientInterface $httpClient;
+    private ClientInterface $httpClient;
     private ?string $lastKnownStatus = null;
+    private SerializerInterface $serializer;
 
     public function __construct(
-        HttpClientInterface $httpClient,
+        SerializerInterface $serializer,
+        ClientInterface $httpClient,
         LoggerInterface $logger,
         LoopInterface $loop
     ) {
+        $this->serializer = $serializer;
         $this->httpClient = $httpClient;
         $this->logger = $logger;
         $this->loop = $loop;
@@ -85,10 +89,11 @@ class CheckHostAvailabilityCommand extends Command
     private function checkHostAvailability(string $url): bool
     {
         try {
+            // Виконання GET запиту
             $response = $this->httpClient->request('GET', $url);
 
             return 200 === $response->getStatusCode();
-        } catch (ExceptionInterface $e) {
+        } catch (GuzzleException $e) {
             $this->logger->error('Error checking host availability: '.$e->getMessage());
 
             return false;
@@ -99,10 +104,10 @@ class CheckHostAvailabilityCommand extends Command
     {
         try {
             $response = $this->httpClient->request('GET', self::API_STATUS_URL);
-            $data = $response->toArray();
+            $data = $this->serializer->decode($response->getBody()->getContents(), 'json');
 
             return $data['status'] ?? null;
-        } catch (ExceptionInterface $e) {
+        } catch (GuzzleException $e) {
             $this->logger->error('Error fetching current status: '.$e->getMessage());
 
             return null;
@@ -121,7 +126,7 @@ class CheckHostAvailabilityCommand extends Command
             } else {
                 $this->logger->error("Failed to update status to $newStatus. Response code: ".$statusCode);
             }
-        } catch (ExceptionInterface $e) {
+        } catch (GuzzleException $e) {
             $this->logger->error("Failed to update status to $newStatus: ".$e->getMessage());
         }
     }

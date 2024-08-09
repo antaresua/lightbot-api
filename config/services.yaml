@@ -41,3 +41,6 @@ services:
     React\EventLoop\LoopInterface:
         class: React\EventLoop\StreamSelectLoop
         public: true
+
+    GuzzleHttp\Client: ~
+    GuzzleHttp\ClientInterface: '@GuzzleHttp\Client'

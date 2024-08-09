@@ -89,8 +89,10 @@ class CheckHostAvailabilityCommand extends Command
     private function checkHostAvailability(string $url): bool
     {
         try {
-            // Виконання GET запиту
-            $response = $this->httpClient->request('GET', $url);
+            $response = $this->httpClient->request('GET', $url, [
+                'timeout' => 5, // Максимальний час очікування відповіді
+                'connect_timeout' => 2, // Час очікування з'єднання
+            ]);
 
             return 200 === $response->getStatusCode();
         } catch (GuzzleException $e) {

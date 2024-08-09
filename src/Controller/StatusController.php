@@ -211,6 +211,20 @@ class StatusController extends AbstractController
     }
 
     /**
+     * @Route("/api/light/statuses", name="light_statuses", methods={"GET"})
+     */
+    public function getStatuses(): JsonResponse
+    {
+        $statuses = $this->statusRepository->findAll();
+        $statusDTOs = array_map(function ($status) {
+            return new StatusDTO($status->getId(), $status->isOn() ? 'on' : 'off', $status->getCreatedAt()->format('Y-m-d H:i:s'));
+        }, $statuses);
+        $data = $this->serializer->serialize($statusDTOs, 'json');
+
+        return new JsonResponse($data, 200, [], true);
+    }
+
+    /**
      * @Route("/api/light/statuses", name="light_statuses_for_date_range", methods={"POST"})
      */
     public function getStatusesForDateRange(Request $request): JsonResponse

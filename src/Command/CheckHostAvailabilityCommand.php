@@ -5,13 +5,10 @@ namespace App\Command;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
-use React\Http\Browser;
-use React\Promise\PromiseInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -25,23 +22,18 @@ class CheckHostAvailabilityCommand extends Command
     private const STATUS_ON = 'on';
     private const STATUS_OFF = 'off';
 
-    private Browser $browser;
     private LoggerInterface $logger;
     private LoopInterface $loop;
     private ?TimerInterface $timerId = null;
     private HttpClientInterface $httpClient;
-    private SerializerInterface $serializer;
+    private ?string $lastKnownStatus = null;
 
     public function __construct(
-        SerializerInterface $serializer,
         HttpClientInterface $httpClient,
-        Browser $browser,
         LoggerInterface $logger,
         LoopInterface $loop
     ) {
-        $this->serializer = $serializer;
         $this->httpClient = $httpClient;
-        $this->browser = $browser;
         $this->logger = $logger;
         $this->loop = $loop;
         parent::__construct();
@@ -75,65 +67,52 @@ class CheckHostAvailabilityCommand extends Command
 
     private function checkHostAndStatus(string $url): void
     {
-        $this->checkHostAvailability($url)->then(
-            function (bool $isAvailable) {
-                // Fetch the current status and then update it if needed
-                $this->getCurrentStatus()->then(
-                    function (?string $currentStatus) use ($isAvailable) {
-                        if (null === $currentStatus) {
-                            return;
-                        }
+        $isAvailable = $this->checkHostAvailability($url);
+        $currentStatus = $this->getCurrentStatus();
 
-                        if (self::STATUS_ON === $currentStatus && !$isAvailable) {
-                            $this->updateStatus(self::STATUS_OFF);
-                            $this->logger->info('Host is DOWN, but status is ON. Updating status to OFF.');
-                        } elseif (self::STATUS_OFF === $currentStatus && $isAvailable) {
-                            $this->logger->info('Host is UP, but status is OFF. Updating status to ON.');
-                            $this->updateStatus(self::STATUS_ON);
-                        }
-                    }
-                )->catch(function (\Throwable $e) {
-                    $this->logger->error('Error fetching current status: '.$e->getMessage());
-                });
+        if (null !== $currentStatus && $currentStatus !== $this->lastKnownStatus) {
+            if ($isAvailable && self::STATUS_OFF === $currentStatus) {
+                $this->updateStatus(self::STATUS_ON);
+                $this->logger->info('Host is UP, updating status to ON.');
+            } elseif (!$isAvailable && self::STATUS_ON === $currentStatus) {
+                $this->updateStatus(self::STATUS_OFF);
+                $this->logger->info('Host is DOWN, updating status to OFF.');
             }
-        )->catch(function (\Throwable $e) use ($url) {
-            $this->logger->error('Error checking host availability at '.$url.': '.$e->getMessage());
-        });
+            $this->lastKnownStatus = $currentStatus;
+        }
     }
 
-    private function checkHostAvailability(string $url): PromiseInterface
+    private function checkHostAvailability(string $url): bool
     {
-        return $this->browser->get($url)->then(
-            function ($response) {
-                $statusCode = $response->getStatusCode();
+        try {
+            $response = $this->httpClient->request('GET', $url);
 
-                return 200 === $statusCode;
-            }
-        )->catch(function (\Throwable $e) {
+            return 200 === $response->getStatusCode();
+        } catch (ExceptionInterface $e) {
+            $this->logger->error('Error checking host availability: '.$e->getMessage());
+
             return false;
-        });
+        }
     }
 
-    private function getCurrentStatus(): PromiseInterface
+    private function getCurrentStatus(): ?string
     {
-        return $this->browser->get(self::API_STATUS_URL)->then(
-            function ($response) {
-                $data = $this->serializer->decode((string) $response->getBody(), true);
+        try {
+            $response = $this->httpClient->request('GET', self::API_STATUS_URL);
+            $data = $response->toArray();
 
-                return $data['status'] ?? null;
-            }
-        )->catch(function (\Throwable $e) {
+            return $data['status'] ?? null;
+        } catch (ExceptionInterface $e) {
             $this->logger->error('Error fetching current status: '.$e->getMessage());
 
             return null;
-        });
+        }
     }
 
     private function updateStatus(string $newStatus): void
     {
         $url = self::API_CHANGE_STATUS_URL.$newStatus;
 
-        $newStatus = strtoupper($newStatus);
         try {
             $response = $this->httpClient->request('POST', $url);
             $statusCode = $response->getStatusCode();

@@ -1,0 +1,61 @@
+#version: '3'
+
+services:
+    app:
+        build:
+            context: .
+            dockerfile: DockerfileDEV
+        image: php:7.4
+        container_name: app
+        tty: true
+        restart: unless-stopped
+        working_dir: /var/www/html
+        ports:
+            - "9000:9000"
+        volumes:
+            - .:/var/www/html
+        networks:
+            - app-network
+        environment:
+            APP_ENV: dev
+        depends_on:
+            - db
+
+    webserver:
+        image: nginx:alpine
+        container_name: webserver
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./docker/nginx/conf.d/app.dev.conf:/etc/nginx/conf.d/app.conf
+            - .:/var/www/html
+#            - ./docker/nginx/certs:/etc/nginx/certs
+        depends_on:
+            - app
+        networks:
+            - app-network
+
+    db:
+        image: mysql:8
+        container_name: db
+        environment:
+            MYSQL_ROOT_PASSWORD: Siromiashka!802
+            MYSQL_DATABASE: svitlo
+            MYSQL_USER: svitlo
+            MYSQL_PASSWORD: uon5j21211
+        ports:
+            - "3306:3306"
+        volumes:
+            - db-data:/var/lib/mysql
+        networks:
+            - app-network
+
+volumes:
+    db-data:
+
+networks:
+    app-network:
+        driver: bridge

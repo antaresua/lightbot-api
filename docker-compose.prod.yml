@@ -4,7 +4,7 @@ services:
     app:
         build:
             context: .
-            dockerfile: Dockerfile
+            dockerfile: DockerfilePROD
         image: php:7.4
         container_name: app
         tty: true
@@ -30,7 +30,7 @@ services:
             - "80:80"
             - "443:443"
         volumes:
-            - ./docker/nginx/conf.d:/etc/nginx/conf.d
+            - ./docker/nginx/conf.d/app.conf:/etc/nginx/conf.d/app.conf
             - .:/var/www/html
             - ./docker/nginx/certs:/etc/nginx/certs
         depends_on:

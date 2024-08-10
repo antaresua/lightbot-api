@@ -7,13 +7,10 @@ use TelegramBot\Api\BotApi;
 
 class TelegramService
 {
-    private $bot;
-    private $chatId;
+    private BotApi $bot;
+    private string $chatId;
     private LoggerInterface $logger;
 
-    /**
-     * @throws \Exception
-     */
     public function __construct(string $telegramToken, string $telegramChatId, LoggerInterface $logger)
     {
         $this->bot = new BotApi($telegramToken);

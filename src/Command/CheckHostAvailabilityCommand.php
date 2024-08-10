@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Command;
 
 use GuzzleHttp\ClientInterface;
@@ -10,16 +12,16 @@ use GuzzleHttp\Exception\TransferException;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 
+#[AsCommand(name: 'app:check-host-availability')]
 class CheckHostAvailabilityCommand extends Command
 {
-    protected static $defaultName = 'app:check-host-availability';
-
     private const API_STATUS_URL = 'https://bot.bondarenkoid.dev/api/light/status';
     private const API_CHANGE_STATUS_URL = 'https://bot.bondarenkoid.dev/api/light/';
     private const CHECK_INTERVAL = 10;
@@ -46,7 +48,7 @@ class CheckHostAvailabilityCommand extends Command
         parent::__construct();
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setDescription('Checks host availability and updates the status accordingly.')
@@ -58,7 +60,7 @@ class CheckHostAvailabilityCommand extends Command
     {
         $host = $input->getArgument('host');
         $port = $input->getArgument('port');
-        $url = "http://{$host}:{$port}";
+        $url = "http://$host:$port";
 
         // Ensure only one timer is created
         if (null === $this->timerId) {

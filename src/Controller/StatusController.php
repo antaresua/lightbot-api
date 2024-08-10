@@ -14,7 +14,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
@@ -26,6 +26,7 @@ class StatusController extends AbstractController
     private const TYPE_OFF = 0;
     private const TYPE_ON = 1;
     private const TYPE_ERROR = 2;
+
     private LightScheduleService $lightScheduleService;
     private StatusRepository $statusRepository;
     private EntityManagerInterface $em;
@@ -51,9 +52,7 @@ class StatusController extends AbstractController
         );
     }
 
-    /**
-     * @Route("/api/light/on", name="light_on", methods={"POST"})
-     */
+    #[Route('/api/light/on', name: 'light_on', methods: ['POST'])]
     public function lightOn(): JsonResponse
     {
         try {
@@ -86,9 +85,7 @@ class StatusController extends AbstractController
         }
     }
 
-    /**
-     * @Route("/api/light/off", name="light_off", methods={"POST"})
-     */
+    #[Route('/api/light/off', name: 'light_off', methods: ['POST'])]
     public function lightOff(): JsonResponse
     {
         try {
@@ -148,7 +145,7 @@ class StatusController extends AbstractController
         $this->em->flush();
     }
 
-    private function formatMessage(\DateTimeInterface $currentDateTime, int $type = self::TYPE_ERROR, string $duration = '', array $nextEvent = []): ?string
+    private function formatMessage(\DateTimeInterface $currentDateTime, int $type = self::TYPE_ERROR, string $duration = '', array $nextEvent = []): string
     {
         if (self::TYPE_ON === $type) {
             if (isset($nextEvent['nextOffTimeStart'], $nextEvent['nextOffTimeEnd'])) {
@@ -190,9 +187,7 @@ class StatusController extends AbstractController
         return 'Щось зламалось. Адмін уже займається питанням...';
     }
 
-    /**
-     * @Route("/api/light/status", name="light_status", methods={"GET"})
-     */
+    #[Route('/api/light/status', name: 'light_status', methods: ['GET'])]
     public function getStatus(): JsonResponse
     {
         try {
@@ -202,7 +197,11 @@ class StatusController extends AbstractController
                 return new JsonResponse(['message' => 'No status available'], Response::HTTP_NOT_FOUND);
             }
 
-            $status = new StatusDTO($lastStatus->getId(), $lastStatus->isOn() ? 'on' : 'off', $lastStatus->getCreatedAt()->format('Y-m-d H:i:s'));
+            $status = new StatusDTO(
+                $lastStatus->getId(),
+                $lastStatus->isOn() ? 'on' : 'off',
+                $lastStatus->getCreatedAt()->format('Y-m-d H:i:s')
+            );
 
             return new JsonResponse($status, Response::HTTP_OK);
         } catch (\Exception $e) {
@@ -210,44 +209,42 @@ class StatusController extends AbstractController
         }
     }
 
-    /**
-     * @Route("/api/light/statuses", name="light_statuses", methods={"GET"})
-     */
+    #[Route('/api/light/statuses', name: 'light_statuses', methods: ['GET'])]
     public function getStatuses(): JsonResponse
     {
-        $statuses = $this->statusRepository->findBy([], ['createdAt' => 'DESC']);
-        $statusDTOs = array_map(function ($status) {
-            return new StatusDTO($status->getId(), $status->isOn() ? 'on' : 'off', $status->getCreatedAt()->format('Y-m-d H:i:s'));
-        }, $statuses);
-        $data = $this->serializer->serialize($statusDTOs, 'json');
+        try {
+            $statuses = $this->statusRepository->findBy([], ['createdAt' => 'DESC']);
+            $statusDTOs = array_map(function ($status) {
+                return new StatusDTO(
+                    $status->getId(),
+                    $status->isOn() ? 'on' : 'off',
+                    $status->getCreatedAt()->format('Y-m-d H:i:s')
+                );
+            }, $statuses);
 
-        return new JsonResponse($data, 200, [], true);
+            return new JsonResponse($statusDTOs, Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
-    /**
-     * @Route("/api/light/statuses", name="light_statuses_for_date_range", methods={"POST"})
-     */
+    #[Route('/api/light/statuses/range', name: 'light_statuses_range', methods: ['POST'])]
     public function getStatusesForDateRange(Request $request): JsonResponse
     {
-        /** @var DateRangeDTO $data */
-        $data = $this->serializer->deserialize(
-            $request->getContent(),
-            DateRangeDTO::class,
-            'json',
-            [DateTimeNormalizer::FORMAT_KEY => 'Y-m-d H:i:s']
-        );
+        try {
+            $data = $this->serializer->deserialize($request->getContent(), DateRangeDTO::class, 'json');
+            $statuses = $this->statusRepository->findByDateRange($data->getStartDate(), $data->getEndDate());
+            $statusDTOs = array_map(function ($status) {
+                return new StatusDTO(
+                    $status->getId(),
+                    $status->isOn() ? 'on' : 'off',
+                    $status->getCreatedAt()->format('Y-m-d H:i:s')
+                );
+            }, $statuses);
 
-        $statuses = $this->statusRepository->findInDateRange($data->start, $data->end);
-
-        $responseData = [];
-        foreach ($statuses as $status) {
-            $responseData[] = new StatusDTO(
-                $status->getId(),
-                $status->isOn() ? 'on' : 'off',
-                $status->getCreatedAt()->format('Y-m-d H:i:s')
-            );
+            return new JsonResponse($statusDTOs, Response::HTTP_OK, [], true);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        return new JsonResponse($responseData);
     }
 }

@@ -4,12 +4,12 @@
 
 light_status:
     resource: '../src/Controller/StatusController.php'
-    type: annotation
+    type: attribute
 
 day:
     resource: '../src/Controller/DayController.php'
-    type: annotation
+    type: attribute
 
 timeslots:
     resource: '../src/Controller/TimeSlotController.php'
-    type: annotation
+    type: attribute

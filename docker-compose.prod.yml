@@ -5,7 +5,7 @@ services:
         build:
             context: .
             dockerfile: DockerfilePROD
-        image: php:7.4
+        image: php:8.3-fpm
         container_name: app
         tty: true
         restart: unless-stopped

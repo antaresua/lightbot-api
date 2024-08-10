@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use App\DTO\DayDTO;
@@ -16,28 +18,19 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[Route('/api/days')]
 class DayController extends AbstractController
 {
-    private EntityManagerInterface $entityManager;
-    private SerializerInterface $serializer;
-    private DayRepository $dayRepository;
-
     public function __construct(
-        EntityManagerInterface $entityManager,
-        SerializerInterface $serializer,
-        DayRepository $dayRepository
+        private readonly EntityManagerInterface $entityManager,
+        private readonly SerializerInterface $serializer,
+        private readonly DayRepository $dayRepository,
     ) {
-        $this->entityManager = $entityManager;
-        $this->serializer = $serializer;
-        $this->dayRepository = $dayRepository;
     }
 
     #[Route('', methods: ['GET'])]
     public function index(): JsonResponse
     {
         try {
-            $days = $this->dayRepository->findAll();
-            $daysDTOs = array_map(function ($day) {
-                return new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName());
-            }, $days);
+            $days     = $this->dayRepository->findAll();
+            $daysDTOs = array_map(fn ($day) => new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName()), $days);
 
             return new JsonResponse($daysDTOs, Response::HTTP_OK);
         } catch (\Exception $e) {
@@ -95,9 +88,7 @@ class DayController extends AbstractController
             $this->entityManager->flush();
 
             // Сериалізуємо створені дні у форматі JSON
-            $daysDTOs = array_map(function ($day) {
-                return new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName());
-            }, $createdDays);
+            $daysDTOs = array_map(fn ($day) => new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName()), $createdDays);
 
             return new JsonResponse($daysDTOs, Response::HTTP_CREATED);
         } catch (\Exception $e) {
@@ -115,7 +106,7 @@ class DayController extends AbstractController
                 return new JsonResponse(['message' => 'Day not found'], Response::HTTP_NOT_FOUND);
             }
 
-            $data = $this->serializer->decode($request->getContent(), true);
+            $data = $this->serializer->decode($request->getContent(), 'json');
 
             $day->setDayOfWeek($data['dayOfWeek']);
             $day->setName($data['name']);
@@ -124,7 +115,7 @@ class DayController extends AbstractController
 
             $data = new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName());
 
-            return new JsonResponse($data, Response::HTTP_OK, [], true);
+            return new JsonResponse($data, Response::HTTP_OK);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }

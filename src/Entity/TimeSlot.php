@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
 use App\Repository\TimeSlotRepository;
@@ -8,8 +10,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: TimeSlotRepository::class)]
 class TimeSlot
 {
-    public const TYPE_ON = 'on';
-    public const TYPE_OFF = 'off';
+    public const TYPE_ON          = 'on';
+    public const TYPE_OFF         = 'off';
     public const TYPE_POSSIBLE_ON = 'possible_on';
 
     #[ORM\Id]

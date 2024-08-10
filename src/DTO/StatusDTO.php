@@ -1,17 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\DTO;
 
 class StatusDTO
 {
-    public int $id;
-    public string $status;
-    public string $createdAt;
-
-    public function __construct(int $id, string $status, string $createdAt)
+    public function __construct(public int $id, public string $status, public string $createdAt)
     {
-        $this->id = $id;
-        $this->status = $status;
-        $this->createdAt = $createdAt;
     }
 }

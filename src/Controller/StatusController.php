@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use App\DTO\DateRangeDTO;
@@ -23,32 +25,21 @@ use Symfony\Component\Serializer\SerializerInterface;
 
 class StatusController extends AbstractController
 {
-    private const TYPE_OFF = 0;
-    private const TYPE_ON = 1;
-    private const TYPE_ERROR = 2;
-
-    private LightScheduleService $lightScheduleService;
-    private StatusRepository $statusRepository;
-    private EntityManagerInterface $em;
-    private TelegramService $telegramService;
-    private LoggerInterface $logger;
-    private SerializerInterface $serializer;
+    private const int TYPE_OFF   = 0;
+    private const int TYPE_ON    = 1;
+    private const int TYPE_ERROR = 2;
+    private readonly SerializerInterface $serializer;
 
     public function __construct(
-        EntityManagerInterface $em,
-        LoggerInterface $logger,
-        TelegramService $telegramService,
-        StatusRepository $statusRepository,
-        LightScheduleService $lightScheduleService
+        private readonly EntityManagerInterface $em,
+        private readonly LoggerInterface $logger,
+        private readonly TelegramService $telegramService,
+        private readonly StatusRepository $statusRepository,
+        private readonly LightScheduleService $lightScheduleService,
     ) {
-        $this->em = $em;
-        $this->logger = $logger;
-        $this->telegramService = $telegramService;
-        $this->statusRepository = $statusRepository;
-        $this->lightScheduleService = $lightScheduleService;
         $this->serializer = new Serializer(
             [new ObjectNormalizer(), new DateTimeNormalizer()],
-            [new JsonEncoder()]
+            [new JsonEncoder()],
         );
     }
 
@@ -60,8 +51,8 @@ class StatusController extends AbstractController
             $this->addStatus(true);
 
             $currentDateTime = new \DateTime('now', new \DateTimeZone('Europe/Kiev'));
-            $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
-            $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
+            $lastChangedAt   = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
+            $duration        = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
             $nextEvent = $this->lightScheduleService->getNextEventData($currentDateTime, true);
 
@@ -69,7 +60,7 @@ class StatusController extends AbstractController
                 $currentDateTime,
                 self::TYPE_ON,
                 $this->formatDuration($duration['days'], $duration['hours'], $duration['minutes']),
-                $nextEvent
+                $nextEvent,
             );
 
             if (!$message) {
@@ -93,8 +84,8 @@ class StatusController extends AbstractController
             $this->addStatus(false);
 
             $currentDateTime = new \DateTime('now', new \DateTimeZone('Europe/Kiev'));
-            $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
-            $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
+            $lastChangedAt   = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
+            $duration        = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
             $nextEvent = $this->lightScheduleService->getNextEventData($currentDateTime, false);
 
@@ -102,7 +93,7 @@ class StatusController extends AbstractController
                 $currentDateTime,
                 self::TYPE_OFF,
                 $this->formatDuration($duration['days'], $duration['hours'], $duration['minutes']),
-                $nextEvent
+                $nextEvent,
             );
 
             if (!$message) {
@@ -154,13 +145,13 @@ class StatusController extends AbstractController
                     $currentDateTime->format('H:i'),
                     empty($duration) ? '0 хв' : $duration,
                     $nextEvent['nextOffTimeStart'],
-                    $nextEvent['nextOffTimeEnd']
+                    $nextEvent['nextOffTimeEnd'],
                 );
             } else {
                 return sprintf(
                     "🟢 Світло з'явилося о *%s*\n🕓 Його не було *%s*",
                     $currentDateTime->format('H:i'),
-                    empty($duration) ? '0 хв' : $duration
+                    empty($duration) ? '0 хв' : $duration,
                 );
             }
         }
@@ -173,7 +164,7 @@ class StatusController extends AbstractController
                     $nextEvent['nextGuaranteedOnStart'],
                     $nextEvent['nextGuaranteedOnEnd'],
                     $nextEvent['nextPossibleOnStart'],
-                    $nextEvent['nextPossibleOnEnd']
+                    $nextEvent['nextPossibleOnEnd'],
                 );
             } else {
                 return sprintf(
@@ -200,7 +191,7 @@ class StatusController extends AbstractController
             $status = new StatusDTO(
                 $lastStatus->getId(),
                 $lastStatus->isOn() ? 'on' : 'off',
-                $lastStatus->getCreatedAt()->format('Y-m-d H:i:s')
+                $lastStatus->getCreatedAt()->format('Y-m-d H:i:s'),
             );
 
             return new JsonResponse($status, Response::HTTP_OK);
@@ -213,14 +204,12 @@ class StatusController extends AbstractController
     public function getStatuses(): JsonResponse
     {
         try {
-            $statuses = $this->statusRepository->findBy([], ['createdAt' => 'DESC']);
-            $statusDTOs = array_map(function ($status) {
-                return new StatusDTO(
-                    $status->getId(),
-                    $status->isOn() ? 'on' : 'off',
-                    $status->getCreatedAt()->format('Y-m-d H:i:s')
-                );
-            }, $statuses);
+            $statuses   = $this->statusRepository->findBy([], ['createdAt' => 'DESC']);
+            $statusDTOs = array_map(fn ($status) => new StatusDTO(
+                $status->getId(),
+                $status->isOn() ? 'on' : 'off',
+                $status->getCreatedAt()->format('Y-m-d H:i:s'),
+            ), $statuses);
 
             return new JsonResponse($statusDTOs, Response::HTTP_OK);
         } catch (\Exception $e) {
@@ -232,15 +221,13 @@ class StatusController extends AbstractController
     public function getStatusesForDateRange(Request $request): JsonResponse
     {
         try {
-            $data = $this->serializer->deserialize($request->getContent(), DateRangeDTO::class, 'json');
-            $statuses = $this->statusRepository->findByDateRange($data->getStartDate(), $data->getEndDate());
-            $statusDTOs = array_map(function ($status) {
-                return new StatusDTO(
-                    $status->getId(),
-                    $status->isOn() ? 'on' : 'off',
-                    $status->getCreatedAt()->format('Y-m-d H:i:s')
-                );
-            }, $statuses);
+            $data       = $this->serializer->deserialize($request->getContent(), DateRangeDTO::class, 'json');
+            $statuses   = $this->statusRepository->findByDateRange($data->getStartDate(), $data->getEndDate());
+            $statusDTOs = array_map(fn ($status) => new StatusDTO(
+                $status->getId(),
+                $status->isOn() ? 'on' : 'off',
+                $status->getCreatedAt()->format('Y-m-d H:i:s'),
+            ), $statuses);
 
             return new JsonResponse($statusDTOs, Response::HTTP_OK, [], true);
         } catch (\Exception $e) {

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use App\DTO\DayDTO;
@@ -19,21 +21,12 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[Route('/api/timeslots')]
 class TimeSlotController extends AbstractController
 {
-    private EntityManagerInterface $entityManager;
-    private SerializerInterface $serializer;
-    private TimeSlotRepository $timeSlotRepository;
-    private DayRepository $dayRepository;
-
     public function __construct(
-        EntityManagerInterface $entityManager,
-        SerializerInterface $serializer,
-        TimeSlotRepository $timeSlotRepository,
-        DayRepository $dayRepository
+        private readonly EntityManagerInterface $entityManager,
+        private readonly SerializerInterface $serializer,
+        private readonly TimeSlotRepository $timeSlotRepository,
+        private readonly DayRepository $dayRepository,
     ) {
-        $this->entityManager = $entityManager;
-        $this->serializer = $serializer;
-        $this->timeSlotRepository = $timeSlotRepository;
-        $this->dayRepository = $dayRepository;
     }
 
     #[Route('', methods: ['GET'])]
@@ -41,7 +34,7 @@ class TimeSlotController extends AbstractController
     {
         try {
             $timeSlots = $this->timeSlotRepository->findAll();
-            $result = [];
+            $result    = [];
             foreach ($timeSlots as $timeSlot) {
                 $item = new TimeSlotDTO(
                     $timeSlot->getId(),
@@ -96,7 +89,7 @@ class TimeSlotController extends AbstractController
             }
 
             $createdTimeSlots = [];
-            $errors = [];
+            $errors           = [];
 
             foreach ($data as $index => $timeSlotData) {
                 if (!isset($timeSlotData['startTime'], $timeSlotData['endTime'], $timeSlotData['startDay'], $timeSlotData['endDay'], $timeSlotData['type'])) {
@@ -105,7 +98,7 @@ class TimeSlotController extends AbstractController
                 }
 
                 $startDay = $this->dayRepository->findOneBy(['dayOfWeek' => $timeSlotData['startDay']]);
-                $endDay = $this->dayRepository->findOneBy(['dayOfWeek' => $timeSlotData['endDay']]);
+                $endDay   = $this->dayRepository->findOneBy(['dayOfWeek' => $timeSlotData['endDay']]);
 
                 if (!$startDay || !$endDay) {
                     $errors[] = ['index' => $index, 'message' => 'Invalid day reference'];
@@ -149,7 +142,7 @@ class TimeSlotController extends AbstractController
                 return new JsonResponse(['message' => 'TimeSlot not found'], Response::HTTP_NOT_FOUND);
             }
 
-            $data = $this->serializer->decode($request->getContent(), true);
+            $data = $this->serializer->decode($request->getContent(), 'json');
 
             $timeSlot->setStartTime(\DateTime::createFromFormat('H:i', $data['startTime']));
             $timeSlot->setEndTime(\DateTime::createFromFormat('H:i', $data['endTime']));

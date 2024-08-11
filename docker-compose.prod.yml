@@ -11,7 +11,7 @@ services:
         restart: unless-stopped
         working_dir: /var/www/html
         ports:
-            - "9000:9000"
+            - "9000:9000"  # Це дозволяє з'єднатися з API на порту 9000
         volumes:
             - .:/var/www/html
         networks:
@@ -27,8 +27,8 @@ services:
         restart: unless-stopped
         tty: true
         ports:
-            - "80:80"
-            - "443:443"
+            - "8080:80"
+            - "8443:443"
         volumes:
             - ./docker/nginx/conf.d/app.conf:/etc/nginx/conf.d/app.conf
             - .:/var/www/html

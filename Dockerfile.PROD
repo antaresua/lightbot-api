@@ -20,8 +20,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY composer.json composer.lock ./
 
 # Створюємо користувача і групу www для застосунку
-RUN groupadd -g 1000 www && \
-    useradd -u 1000 -ms /bin/bash -g www www
+RUN groupadd -g 1000 www-data && \
+    useradd -u 1000 -ms /bin/bash -g www-data www-data
 
 # Створюємо директорію для логів
 RUN mkdir -p /var/log/supervisor
@@ -30,10 +30,10 @@ RUN mkdir -p /var/log/supervisor
 COPY docker/supervisord.conf /etc/supervisor/supervisord.conf
 
 # Копіюємо весь проект і встановлюємо права доступу
-COPY --chown=www:www . .
+COPY --chown=www-data:www-data . .
 
 # Змінюємо власність на директорію для логів
-RUN chown www:www /var/log/supervisor
+RUN chown www-data:www-data /var/log/supervisor
 
 # Встановлюємо всі залежності для проєкту
 USER www

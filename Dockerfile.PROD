@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y \
     unzip \
     cron \
     supervisor \
+    net-tools \
+    procps \
+    iproute2 \
+    netcat-openbsd \
     && docker-php-ext-install pdo pdo_mysql mbstring zip intl \
     && rm -rf /var/lib/apt/lists/*
 

@@ -19,10 +19,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Копіюємо тільки файли залежностей та встановлюємо їх
 COPY composer.json composer.lock ./
 
-# Створюємо користувача і групу www для застосунку
-RUN groupadd -g 1000 www-data && \
-    useradd -u 1000 -ms /bin/bash -g www-data www-data
-
 # Створюємо директорію для логів
 RUN mkdir -p /var/log/supervisor
 
@@ -36,7 +32,7 @@ COPY --chown=www-data:www-data . .
 RUN chown www-data:www-data /var/log/supervisor
 
 # Встановлюємо всі залежності для проєкту
-USER www
+USER www-data
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Відкриваємо порт 9000

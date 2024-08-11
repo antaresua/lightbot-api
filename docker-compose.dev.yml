@@ -4,7 +4,7 @@ services:
     app:
         build:
             context: .
-            dockerfile: DockerfileDEV
+            dockerfile: Dockerfile
         image: php:8.3-fpm
         container_name: app
         tty: true

@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Копіюйте ваш конфігураційний файл www.conf
-COPY www.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php-fpm/www.conf /usr/local/etc/php-fpm.d/www.conf
 
 # Встановлюємо Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

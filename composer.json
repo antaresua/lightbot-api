@@ -93,14 +93,10 @@
             "assets:install %PUBLIC_DIR%": "symfony-cmd"
         },
         "post-install-cmd": [
-            "@auto-scripts",
-            "cp -R hooks/* .git/hooks/",
-            "chmod +x .git/hooks/pre-commit"
+            "@auto-scripts"
         ],
         "post-update-cmd": [
-            "@auto-scripts",
-            "cp -R hooks/* .git/hooks/",
-            "chmod +x .git/hooks/pre-commit"
+            "@auto-scripts"
         ]
     },
     "conflict": {

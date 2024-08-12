@@ -20,7 +20,7 @@ RUN curl -sS https://getcomposer.org/installer | php && \
     mv composer.phar /usr/local/bin/composer
 
 # Встановлюємо залежності Symfony
-RUN composer install
+RUN composer install --no-scripts --no-plugins
 
 # Виставляємо порт
 EXPOSE 9000

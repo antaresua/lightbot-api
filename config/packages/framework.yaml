@@ -17,8 +17,12 @@ framework:
     php_errors:
         log: true
 
+    handle_all_throwables: true
+
     messenger:
-        reset_on_message: true
+
+    annotations:
+        enabled: false
 
 when@test:
     framework:

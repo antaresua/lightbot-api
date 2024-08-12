@@ -1,33 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
 use App\Repository\DayRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\Entity(repositoryClass=DayRepository::class)
- */
+#[ORM\Entity(repositoryClass: DayRepository::class)]
 class Day
 {
-    /**
-     * @ORM\Id
-     *
-     * @ORM\GeneratedValue
-     *
-     * @ORM\Column(type="integer")
-     */
-    private $id;
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'integer')]
+    private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="integer")
-     */
-    private $dayOfWeek;
+    #[ORM\Column(type: 'integer')]
+    private int $dayOfWeek;
 
-    /**
-     * @ORM\Column(type="string", length=20)
-     */
-    private $name;
+    #[ORM\Column(type: 'string', length: 20)]
+    private string $name;
 
     public function getId(): ?int
     {

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\Day;
@@ -8,12 +10,6 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * @method TimeSlot|null find($id, $lockMode = null, $lockVersion = null)
- * @method TimeSlot|null findOneBy(array $criteria, array $orderBy = null)
- * @method TimeSlot[]    findAll()
- * @method TimeSlot[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
- */
 class TimeSlotRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)

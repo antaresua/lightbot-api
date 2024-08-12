@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Command;
 
 use GuzzleHttp\ClientInterface;
@@ -10,43 +12,39 @@ use GuzzleHttp\Exception\TransferException;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 
+#[AsCommand(name: 'app:check-host-availability')]
 class CheckHostAvailabilityCommand extends Command
 {
-    protected static $defaultName = 'app:check-host-availability';
-
-    private const API_STATUS_URL = 'https://bot.bondarenkoid.dev/api/light/status';
-    private const API_CHANGE_STATUS_URL = 'https://bot.bondarenkoid.dev/api/light/';
-    private const CHECK_INTERVAL = 10;
-    private const STATUS_ON = 'on';
-    private const STATUS_OFF = 'off';
-
-    private LoggerInterface $logger;
-    private LoopInterface $loop;
-    private ?TimerInterface $timerId = null;
-    private ClientInterface $httpClient;
+    private const int CHECK_INTERVAL      = 10;
+    private const string STATUS_ON        = 'on';
+    private const string STATUS_OFF       = 'off';
+    private ?TimerInterface $timerId      = null;
     private bool $unableToConnectLastTime = false;
-    private SerializerInterface $serializer;
+    private string $apiStatusUrl;
+    private string $apiChangeStatusUrl;
 
     public function __construct(
-        SerializerInterface $serializer,
-        ClientInterface $httpClient,
-        LoggerInterface $logger,
-        LoopInterface $loop
+        private readonly SerializerInterface $serializer,
+        private readonly ClientInterface $httpClient,
+        private readonly LoggerInterface $logger,
+        private readonly LoopInterface $loop,
+        ParameterBagInterface $params,
     ) {
-        $this->serializer = $serializer;
-        $this->httpClient = $httpClient;
-        $this->logger = $logger;
-        $this->loop = $loop;
         parent::__construct();
+
+        $this->apiStatusUrl       = $params->get('api_status_url');
+        $this->apiChangeStatusUrl = $params->get('api_change_status_url');
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setDescription('Checks host availability and updates the status accordingly.')
@@ -58,11 +56,11 @@ class CheckHostAvailabilityCommand extends Command
     {
         $host = $input->getArgument('host');
         $port = $input->getArgument('port');
-        $url = "http://{$host}:{$port}";
+        $url  = "http://$host:$port";
 
         // Ensure only one timer is created
         if (null === $this->timerId) {
-            $this->timerId = $this->loop->addPeriodicTimer(self::CHECK_INTERVAL, function () use ($url) {
+            $this->timerId = $this->loop->addPeriodicTimer(self::CHECK_INTERVAL, function () use ($url): void {
                 $this->checkHostAndStatus($url);
             });
         }
@@ -74,8 +72,8 @@ class CheckHostAvailabilityCommand extends Command
 
     private function checkHostAndStatus(string $url): void
     {
-        $isAvailable = $this->checkHostAvailability($url);
-        $hostStatus = $isAvailable ? self::STATUS_ON : self::STATUS_OFF;
+        $isAvailable   = $this->checkHostAvailability($url);
+        $hostStatus    = $isAvailable ? self::STATUS_ON : self::STATUS_OFF;
         $currentStatus = $this->getCurrentStatus();
 
         if ($hostStatus !== $currentStatus) {
@@ -93,14 +91,14 @@ class CheckHostAvailabilityCommand extends Command
     {
         try {
             $response = $this->httpClient->request('GET', $url, [
-                'timeout' => 5, // Максимальний час очікування відповіді
+                'timeout'         => 5, // Максимальний час очікування відповіді
                 'connect_timeout' => 2, // Час очікування з'єднання
             ]);
 
             $this->unableToConnectLastTime = false;
 
             return 200 === $response->getStatusCode();
-        } catch (ConnectException $e) {
+        } catch (ConnectException) {
             if (!$this->unableToConnectLastTime) {
                 $this->logger->info('Unable to connect to the host...');
             }
@@ -126,8 +124,8 @@ class CheckHostAvailabilityCommand extends Command
     private function getCurrentStatus(): ?string
     {
         try {
-            $response = $this->httpClient->request('GET', self::API_STATUS_URL);
-            $data = $this->serializer->decode($response->getBody()->getContents(), 'json');
+            $response = $this->httpClient->request('GET', $this->apiStatusUrl);
+            $data     = $this->serializer->decode($response->getBody()->getContents(), 'json');
 
             return $data['status'] ?? null;
         } catch (TransferException $e) {
@@ -139,11 +137,11 @@ class CheckHostAvailabilityCommand extends Command
 
     private function updateStatus(string $newStatus): void
     {
-        $url = self::API_CHANGE_STATUS_URL.$newStatus;
+        $url       = $this->apiChangeStatusUrl.'/'.$newStatus;
         $newStatus = strtoupper($newStatus);
 
         try {
-            $response = $this->httpClient->request('POST', $url);
+            $response   = $this->httpClient->request('POST', $url);
             $statusCode = $response->getStatusCode();
             if (200 === $statusCode) {
                 $this->logger->info("Status updated to $newStatus successfully.");

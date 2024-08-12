@@ -1,19 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\Status;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * @extends ServiceEntityRepository<Status>
- *
- * @method Status|null find($id, $lockMode = null, $lockVersion = null)
- * @method Status|null findOneBy(array $criteria, array $orderBy = null)
- * @method Status[]    findAll()
- * @method Status[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
- */
 class StatusRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -70,14 +64,10 @@ class StatusRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
-    /**
-     * @return Status[]
-     */
-    public function findInDateRange(\DateTimeInterface $start, \DateTimeInterface $end): array
+    public function findByDateRange(\DateTimeInterface $start, \DateTimeInterface $end): array
     {
-        $qb = $this->createQueryBuilder('s');
-
-        return $qb->where('s.createdAt BETWEEN :start AND :end')
+        return $this->createQueryBuilder('s')
+            ->where('s.createdAt BETWEEN :start AND :end')
             ->setParameter('start', $start)
             ->setParameter('end', $end)
             ->getQuery()

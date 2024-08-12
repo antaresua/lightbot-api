@@ -6,6 +6,8 @@
 parameters:
     telegram_token: '%env(TELEGRAM_TOKEN)%'
     telegram_chat_id: '%env(TELEGRAM_CHAT_ID)%'
+    api_status_url: '%env(API_STATUS_URL)%'
+    api_change_status_url: '%env(API_CHANGE_STATUS_URL)%'
 
 services:
     # default configuration for services in *this* file
@@ -27,7 +29,8 @@ services:
     App\Service\TelegramService:
         arguments:
             $telegramToken: '%env(TELEGRAM_TOKEN)%'
-            $telegramChatId: '%env(TELEGRAM_CHAT_ID)%'
+            $chatId: '%env(TELEGRAM_CHAT_ID)%'
+            $logger: '@logger'
 
     App\Service\LightScheduleService:
         arguments:

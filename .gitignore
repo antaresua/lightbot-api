@@ -31,3 +31,6 @@ supervisord.pid
 /.php-cs-fixer.php
 /.php-cs-fixer.cache
 ###< friendsofphp/php-cs-fixer ###
+###> rectorphp/rector ###
+/rector.php
+###< rectorphp/rector ###

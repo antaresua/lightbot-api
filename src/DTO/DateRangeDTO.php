@@ -1,15 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\DTO;
 
 class DateRangeDTO
 {
-    public \DateTimeInterface $start;
-    public \DateTimeInterface $end;
-
-    public function __construct(\DateTimeInterface $start, \DateTimeInterface $end)
+    public function __construct(public \DateTimeInterface $start, public \DateTimeInterface $end)
     {
-        $this->start = $start;
-        $this->end = $end;
     }
 }

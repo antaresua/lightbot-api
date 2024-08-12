@@ -1,17 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\DTO;
 
 class DayDTO
 {
-    public int $id;
-    public int $dayOfWeek;
-    public string $name;
-
-    public function __construct(int $id, string $dayOfWeek, string $name)
+    public function __construct(public int $id, public int $dayOfWeek, public string $name)
     {
-        $this->id = $id;
-        $this->dayOfWeek = $dayOfWeek;
-        $this->name = $name;
     }
 }

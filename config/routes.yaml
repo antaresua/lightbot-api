@@ -13,3 +13,7 @@ day:
 timeslots:
     resource: '../src/Controller/TimeSlotController.php'
     type: attribute
+
+telegram:
+    resource: '../src/Controller/TelegramController.php'
+    type: attribute

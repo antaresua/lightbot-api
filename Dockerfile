@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     zlib1g-dev \
     libcurl4-openssl-dev \
-    && docker-php-ext-install pdo pdo_mysql zip bcmath ctype iconv mbstring xml curl
+    libicu-dev \
+    && docker-php-ext-install pdo pdo_mysql zip bcmath ctype iconv mbstring xml curl intl
 
 # Встановлення Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -26,6 +27,9 @@ COPY . .
 
 # Копіюємо composer файли і встановлюємо залежності з оптимізацією для продакшену
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+# Запуск міграцій
+RUN php bin/console doctrine:migrations:migrate --no-interaction --env=prod
 
 # Налаштування середовища на продакшен
 RUN php bin/console cache:clear --env=prod \

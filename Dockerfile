@@ -1,33 +1,36 @@
-# Вибираємо базовий образ PHP
+# Dockerfile для Symfony API
+
 FROM php:8.3-fpm
 
-# Встановлюємо залежності
-RUN apt-get update && apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev libicu-dev libxml2-dev \
-    libzip-dev git unzip && \
-    docker-php-ext-configure gd --with-freetype --with-jpeg && \
-    docker-php-ext-install gd intl pdo pdo_mysql zip && \
-    pecl install xdebug && \
-    docker-php-ext-enable xdebug
+# Встановлення необхідних залежностей
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libpq-dev \
+    libonig-dev \
+    libzip-dev \
+    libicu-dev \
+    libxml2-dev \
+    zlib1g-dev \
+    curl \
+    && docker-php-ext-install pdo pdo_mysql zip bcmath ctype iconv mbstring xml curl
 
 # Встановлення Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Встановлення Symfony CLI (необов'язково)
-RUN curl -sS https://get.symfony.com/cli/installer | bash \
-    && mv /root/.symfony*/bin/symfony /usr/local/bin/symfony
-
 # Налаштування робочої директорії
 WORKDIR /var/www/backend
 
-# Копіюємо composer файли і встановлюємо залежності
+# Копіюємо composer файли і встановлюємо залежності з оптимізацією для продакшену
 COPY composer.json composer.lock ./
-RUN composer install --no-scripts --no-autoloader
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 # Копіюємо інші файли додатку
 COPY . .
 
-# Виконуємо залишкову установку залежностей
-RUN composer dump-autoload --optimize
+# Налаштування середовища на продакшен
+RUN php bin/console cache:clear --env=prod \
+    && php bin/console cache:warmup --env=prod
 
 # Виставляємо права на кеш та лог директрії
 RUN chown -R www-data:www-data var/cache var/log

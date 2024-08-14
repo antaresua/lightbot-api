@@ -38,6 +38,9 @@ RUN php bin/console cache:clear --env=prod \
 # Виставляємо права на кеш та лог директрії
 RUN chown -R www-data:www-data var/cache var/log
 
+# Налаштовуємо PHP-FPM для прослуховування на всіх інтерфейсах
+RUN sed -i 's/^listen = .*/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.d/www.conf
+
 # Експонуємо порт
 EXPOSE 9000
 

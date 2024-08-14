@@ -21,12 +21,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Налаштування робочої директорії
 WORKDIR /var/www/backend
 
-# Копіюємо composer файли і встановлюємо залежності з оптимізацією для продакшену
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
-
 # Копіюємо інші файли додатку
 COPY . .
+
+# Копіюємо composer файли і встановлюємо залежності з оптимізацією для продакшену
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 # Налаштування середовища на продакшен
 RUN php bin/console cache:clear --env=prod \

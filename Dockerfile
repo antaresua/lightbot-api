@@ -9,21 +9,31 @@ RUN apt-get update && apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
     pecl install xdebug && \
     docker-php-ext-enable xdebug
 
-# Налаштовуємо робочий каталог
-WORKDIR /var/www/html
+# Встановлення Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Копіюємо код проєкту
+# Встановлення Symfony CLI (необов'язково)
+RUN curl -sS https://get.symfony.com/cli/installer | bash \
+    && mv /root/.symfony*/bin/symfony /usr/local/bin/symfony
+
+# Налаштування робочої директорії
+WORKDIR /var/www/backend
+
+# Копіюємо composer файли і встановлюємо залежності
+COPY composer.json composer.lock ./
+RUN composer install --no-scripts --no-autoloader
+
+# Копіюємо інші файли додатку
 COPY . .
 
-# Встановлюємо Composer
-RUN curl -sS https://getcomposer.org/installer | php && \
-    mv composer.phar /usr/local/bin/composer
+# Виконуємо залишкову установку залежностей
+RUN composer dump-autoload --optimize
 
-# Встановлюємо залежності Symfony
-RUN composer install --no-scripts --no-plugins
+# Виставляємо права на кеш та лог директрії
+RUN chown -R www-data:www-data var/cache var/log
 
-# Виставляємо порт
+# Експонуємо порт
 EXPOSE 9000
 
-# Запускаємо PHP-FPM
+# Запускаємо PHP-FPM сервер
 CMD ["php-fpm"]

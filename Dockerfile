@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     libicu-dev \
     libxml2-dev \
     zlib1g-dev \
-    curl \
+    libcurl4-openssl-dev \
     && docker-php-ext-install pdo pdo_mysql zip bcmath ctype iconv mbstring xml curl
 
 # Встановлення Composer

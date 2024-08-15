@@ -24,7 +24,7 @@
 telegram_token.txt
 telegram_chat_id.txt
 letsencrypt
-docker/nginx/certs
+/docker/certs
 supervisord.log
 supervisord.pid
 ###> friendsofphp/php-cs-fixer ###

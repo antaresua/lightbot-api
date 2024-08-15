@@ -29,18 +29,20 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 # Запуск міграцій
-RUN php bin/console doctrine:migrations:migrate --no-interaction --env=prod
+#RUN php bin/console doctrine:migrations:migrate --no-interaction --env=prod
 
 # Налаштування середовища на продакшен
 RUN php bin/console cache:clear --env=prod \
     && php bin/console cache:warmup --env=prod
 
 # Виставляємо права на кеш та лог директрії
-RUN chown -R www-data:www-data var/cache var/log
+RUN chown -R www-data:www-data ./
 
 # Налаштовуємо PHP-FPM для прослуховування на всіх інтерфейсах
 RUN sed -i 's/^listen = .*/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.d/www.conf
 RUN sed -i 's/^listen = .*/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.d/zz-docker.conf
+
+USER www-data
 
 # Експонуємо порт
 EXPOSE 9000

@@ -11,10 +11,8 @@ services:
             DATABASE_URL: mysql://lightbot:uon5j21211@mysql:3306/lightbot
         volumes:
             - .:/var/www/html
-        ports:
-            - "9000:9000"
         networks:
-            - lightbot-backend
+            - backend
 
     mysql:
         image: mysql:8.0
@@ -26,11 +24,8 @@ services:
             MYSQL_PASSWORD: uon5j21211
         volumes:
             - mysql_data:/var/lib/mysql
-        ports:
-            - "3306:3306"
         networks:
-            - lightbot-backend
-
+            - backend
 
     nginx:
         image: nginx:latest
@@ -38,14 +33,15 @@ services:
         volumes:
             - .:/var/www/html
             - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
-        ports:
-            - "80:80"
-            - "443:443"
+        environment:
+            - VIRTUAL_HOST=api.bondarenkoid.dev
+            - VIRTUAL_PORT=80
         networks:
-            - lightbot-backend
+            - backend
 
 networks:
-    lightbot-backend:
+    backend:
+        external: true
 
 volumes:
     mysql_data:

@@ -1,0 +1,16 @@
+monolog:
+    handlers:
+        main:
+            type: stream
+            path: '%kernel.logs_dir%/%kernel.environment%.log'
+            level: debug
+            channels: [ '!event' ] # Виключити події, якщо не потрібно
+        console:
+            type: console
+            level: debug
+            channels: [ '!event' ] # Виводити логи в консолі при використанні команди console
+        # Додатковий обробник для виведення всіх логів на екран
+        syslog:
+            type: syslog
+            level: debug
+            channels: [ '!event' ]

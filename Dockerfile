@@ -1,5 +1,4 @@
 # Dockerfile для Symfony API
-
 FROM php:8.3-fpm
 
 # Встановлення необхідних залежностей

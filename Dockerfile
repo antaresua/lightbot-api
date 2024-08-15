@@ -40,6 +40,7 @@ RUN chown -R www-data:www-data var/cache var/log
 
 # Налаштовуємо PHP-FPM для прослуховування на всіх інтерфейсах
 RUN sed -i 's/^listen = .*/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.d/www.conf
+RUN sed -i 's/^listen = .*/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.d/zz-docker.conf
 
 # Експонуємо порт
 EXPOSE 9000

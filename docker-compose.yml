@@ -28,7 +28,7 @@ services:
             - lightbot
 
 networks:
-    backend:
+    lightbot:
         external: true
 
 volumes:

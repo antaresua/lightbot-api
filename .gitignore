@@ -34,3 +34,5 @@ supervisord.pid
 ###> rectorphp/rector ###
 /rector.php
 ###< rectorphp/rector ###
+
+./docker-compose.yml

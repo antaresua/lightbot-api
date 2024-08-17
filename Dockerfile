@@ -32,9 +32,10 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progre
 # Запуск міграцій
 #RUN php bin/console doctrine:migrations:migrate --no-interaction --env=prod
 
-# Налаштування середовища на продакшен
+# Налаштування середовища
 RUN php bin/console cache:clear --env=prod \
-    && php bin/console cache:warmup --env=prod
+    && php bin/console cache:warmup --env=prod \
+    && php bin/console lexik:jwt:generate-keypair
 
 # Виставляємо права на кеш та лог директрії
 RUN chown -R www-data:www-data ./

@@ -8,11 +8,6 @@
 /vendor/
 ###< symfony/framework-bundle ###
 
-###> phpunit/phpunit ###
-/phpunit.xml
-.phpunit.result.cache
-###< phpunit/phpunit ###
-
 ###> symfony/phpunit-bridge ###
 .phpunit.result.cache
 /phpunit.xml
@@ -26,7 +21,7 @@ letsencrypt
 /docker/certs
 supervisord.log
 supervisord.pid
-./docker-compose.yml
+docker-compose.yml
 ###< OTHER ###
 
 ###> friendsofphp/php-cs-fixer ###

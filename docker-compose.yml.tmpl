@@ -5,7 +5,7 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        container_name: lightbot-api
+        container_name: lightbot-back
         environment:
             APP_ENV: prod
             DATABASE_URL: mysql://lightbot:lightbot_password@mysql:3306/lightbot

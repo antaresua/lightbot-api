@@ -31,8 +31,8 @@ class NotifyMaintenanceCommand extends Command
     {
         $status = $input->getArgument('status');
         $message = match ($status) {
-            'off' => '⚠️ Канал зупинено на технічне обслуговування\.',
-            'on' => '✅ Роботу каналу відновлено\.',
+            'off' => '✅ Роботу каналу відновлено\.',
+            'on' => '⚠️ Канал зупинено на технічне обслуговування\.',
             default => null,
         };
 

@@ -36,6 +36,7 @@ security:
 
     access_control:
         - { path: ^/api/timeslots, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/light/status, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/light/statuses, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/auth/(login|refresh), roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

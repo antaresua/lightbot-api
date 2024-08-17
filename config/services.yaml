@@ -6,6 +6,9 @@
 parameters:
     telegram_token: '%env(TELEGRAM_TOKEN)%'
     telegram_chat_id: '%env(TELEGRAM_CHAT_ID)%'
+    api_auth_url: '%env(API_AUTH_URL)%'
+    api_username: '%env(API_USERNAME)%'
+    api_password: '%env(API_PASSWORD)%'
     api_status_url: '%env(API_STATUS_URL)%'
     api_change_status_url: '%env(API_CHANGE_STATUS_URL)%'
 

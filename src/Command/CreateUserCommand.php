@@ -32,7 +32,8 @@ class CreateUserCommand extends Command
     {
         $this
             ->addArgument('email', InputArgument::REQUIRED, 'The email of the user.')
-            ->addArgument('password', InputArgument::REQUIRED, 'The password of the user.');
+            ->addArgument('password', InputArgument::REQUIRED, 'The password of the user.')
+            ->addArgument(name: 'role', mode: InputArgument::OPTIONAL, description: 'Role of new user.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -51,6 +52,12 @@ class CreateUserCommand extends Command
         // Створення нового користувача
         $user = new User();
         $user->setEmail($email);
+
+        if ($input->getArgument('role') === 'admin') {
+            $user->setRoles(['ROLE_ADMIN', 'ROLE_USER']);
+        } else {
+            $user->setRoles(['ROLE_USER']);
+        }
 
         // Хешування пароля
         $hashedPassword = $this->passwordHasher->hashPassword($user, $password);

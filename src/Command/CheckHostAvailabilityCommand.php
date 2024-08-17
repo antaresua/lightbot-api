@@ -23,25 +23,32 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[AsCommand(name: 'app:check-host-availability')]
 class CheckHostAvailabilityCommand extends Command
 {
-    private const int CHECK_INTERVAL      = 10;
-    private const string STATUS_ON        = 'on';
-    private const string STATUS_OFF       = 'off';
-    private ?TimerInterface $timerId      = null;
+    private const int CHECK_INTERVAL = 10;
+    private const string STATUS_ON = 'on';
+    private const string STATUS_OFF = 'off';
+    private ?TimerInterface $timerId = null;
     private bool $unableToConnectLastTime = false;
     private string $apiStatusUrl;
     private string $apiChangeStatusUrl;
+    private string $apiAuthUrl;
+    private string $username;
+    private string $password;
 
     public function __construct(
         private readonly SerializerInterface $serializer,
-        private readonly ClientInterface $httpClient,
-        private readonly LoggerInterface $logger,
-        private readonly LoopInterface $loop,
-        ParameterBagInterface $params,
-    ) {
+        private readonly ClientInterface     $httpClient,
+        private readonly LoggerInterface     $logger,
+        private readonly LoopInterface       $loop,
+        ParameterBagInterface                $params,
+    )
+    {
         parent::__construct();
 
-        $this->apiStatusUrl       = $params->get('api_status_url');
+        $this->apiStatusUrl = $params->get('api_status_url');
         $this->apiChangeStatusUrl = $params->get('api_change_status_url');
+        $this->apiAuthUrl = $params->get('api_auth_url');
+        $this->username = $params->get('api_username');
+        $this->password = $params->get('api_password');
     }
 
     protected function configure(): void
@@ -56,7 +63,7 @@ class CheckHostAvailabilityCommand extends Command
     {
         $host = $input->getArgument('host');
         $port = $input->getArgument('port');
-        $url  = "http://$host:$port";
+        $url = "http://$host:$port";
 
         // Ensure only one timer is created
         if (null === $this->timerId) {
@@ -72,8 +79,8 @@ class CheckHostAvailabilityCommand extends Command
 
     private function checkHostAndStatus(string $url): void
     {
-        $isAvailable   = $this->checkHostAvailability($url);
-        $hostStatus    = $isAvailable ? self::STATUS_ON : self::STATUS_OFF;
+        $isAvailable = $this->checkHostAvailability($url);
+        $hostStatus = $isAvailable ? self::STATUS_ON : self::STATUS_OFF;
         $currentStatus = $this->getCurrentStatus();
 
         if ($hostStatus !== $currentStatus) {
@@ -91,7 +98,7 @@ class CheckHostAvailabilityCommand extends Command
     {
         try {
             $response = $this->httpClient->request('GET', $url, [
-                'timeout'         => 5, // Максимальний час очікування відповіді
+                'timeout' => 5, // Максимальний час очікування відповіді
                 'connect_timeout' => 2, // Час очікування з'єднання
             ]);
 
@@ -107,15 +114,15 @@ class CheckHostAvailabilityCommand extends Command
 
             return false;
         } catch (ServerException $e) {
-            $this->logger->error('Server error: '.$e->getMessage());
+            $this->logger->error('Server error: ' . $e->getMessage());
 
             return false;
         } catch (ClientException $e) {
-            $this->logger->error('Client error: '.$e->getMessage());
+            $this->logger->error('Client error: ' . $e->getMessage());
 
             return false;
         } catch (TransferException $e) {
-            $this->logger->error('Transfer error: '.$e->getMessage());
+            $this->logger->error('Transfer error: ' . $e->getMessage());
 
             return false;
         }
@@ -125,11 +132,11 @@ class CheckHostAvailabilityCommand extends Command
     {
         try {
             $response = $this->httpClient->request('GET', $this->apiStatusUrl);
-            $data     = $this->serializer->decode($response->getBody()->getContents(), 'json');
+            $data = $this->serializer->decode($response->getBody()->getContents(), 'json');
 
             return $data['status'] ?? null;
         } catch (TransferException $e) {
-            $this->logger->error('Error fetching current status: '.$e->getMessage());
+            $this->logger->error('Error fetching current status: ' . $e->getMessage());
 
             return null;
         }
@@ -137,19 +144,44 @@ class CheckHostAvailabilityCommand extends Command
 
     private function updateStatus(string $newStatus): void
     {
-        $url       = $this->apiChangeStatusUrl.'/'.$newStatus;
+        $url = $this->apiChangeStatusUrl . '/' . $newStatus;
         $newStatus = strtoupper($newStatus);
 
         try {
-            $response   = $this->httpClient->request('POST', $url);
+            // 1. Отримуємо JWT токен
+            $response = $this->httpClient->request('POST', $this->apiAuthUrl, [
+                'json' => [
+                    'username' => $this->username,
+                    'password' => $this->password,
+                ],
+            ]);
+
+            if (200 !== $response->getStatusCode()) {
+                $this->logger->error("Failed to authenticate. Response code: " . $response->getStatusCode());
+                return;
+            }
+
+            $data = $this->serializer->decode($response->getBody()->getContents(), 'json');
+            $token = $data['token'] ?? null;
+
+            if (!$token) {
+                $this->logger->error('Authentication failed: No token received.');
+                return;
+            }
+            $response = $this->httpClient->request('POST', $url, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $token,
+                ],
+            ]);
+
             $statusCode = $response->getStatusCode();
             if (200 === $statusCode) {
                 $this->logger->info("Status updated to $newStatus successfully.");
             } else {
-                $this->logger->error("Failed to update status to $newStatus. Response code: ".$statusCode);
+                $this->logger->error("Failed to update status to $newStatus. Response code: " . $statusCode);
             }
         } catch (TransferException $e) {
-            $this->logger->error("Failed to update status to $newStatus: ".$e->getMessage());
+            $this->logger->error("Failed to update status to $newStatus: " . $e->getMessage());
         }
     }
 }

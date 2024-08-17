@@ -1,37 +1,51 @@
 security:
+    enable_authenticator_manager: true
     # Password hashers configuration
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
     # User providers configuration
     providers:
-        users_in_memory: { memory: null }
+        # used to reload user from session & other features (e.g. switch_user)
+        app_user_provider:
+            entity:
+                class: App\Entity\User
+                property: email
 
     # Firewalls configuration
     firewalls:
-        dev:
-            pattern: ^/(_(profiler|wdt)|css|images|js)/
-            security: false
-        main:
-            lazy: true
-            provider: users_in_memory
+        login:
+            pattern: ^/api/auth/login
+            stateless: true
+            json_login:
+                check_path: /api/auth/login
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
 
-            # Activate different ways to authenticate
-            # Example:
-            # switch_user: true
+        api:
+            pattern: ^/api
+            stateless: true
+            entry_point: jwt
+            json_login:
+                check_path: /api/auth/login
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+            jwt: ~
+            refresh_jwt:
+                check_path: /api/auth/refresh
 
-    # Access control configuration
     access_control:
-    # Add your access control rules here
-    # - { path: ^/admin, roles: ROLE_ADMIN }
-    # - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/api/timeslots, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/light/statuses, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/auth/(login|refresh), roles: PUBLIC_ACCESS }
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+    role_hierarchy:
+        ROLE_ADMIN: ROLE_USER
 
 # Configuration for testing environment
 when@test:
     security:
         password_hashers:
             Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
-                algorithm: auto
-                cost: 4 # Lowest possible value for bcrypt
-                time_cost: 3 # Lowest possible value for argon
-                memory_cost: 10 # Lowest possible value for argon
+                algorithm: plaintext

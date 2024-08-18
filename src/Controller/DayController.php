@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route('/api/days')]
@@ -29,10 +30,13 @@ class DayController extends AbstractController
     public function index(): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $days     = $this->dayRepository->findAll();
             $daysDTOs = array_map(fn ($day) => new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName()), $days);
 
             return new JsonResponse($daysDTOs, Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -42,6 +46,7 @@ class DayController extends AbstractController
     public function show(int $id): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $day = $this->dayRepository->find($id);
 
             if (!$day) {
@@ -51,6 +56,8 @@ class DayController extends AbstractController
             $data = new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName());
 
             return new JsonResponse($data, Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -60,6 +67,7 @@ class DayController extends AbstractController
     public function create(Request $request): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             // Отримуємо JSON дані з запиту
             $data = $this->serializer->decode($request->getContent(), 'json');
 
@@ -91,6 +99,8 @@ class DayController extends AbstractController
             $daysDTOs = array_map(fn ($day) => new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName()), $createdDays);
 
             return new JsonResponse($daysDTOs, Response::HTTP_CREATED);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -100,6 +110,7 @@ class DayController extends AbstractController
     public function update(int $id, Request $request): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $day = $this->dayRepository->find($id);
 
             if (!$day) {
@@ -116,6 +127,8 @@ class DayController extends AbstractController
             $data = new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName());
 
             return new JsonResponse($data, Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -125,6 +138,7 @@ class DayController extends AbstractController
     public function delete(int $id): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $day = $this->dayRepository->find($id);
 
             if (!$day) {
@@ -135,6 +149,8 @@ class DayController extends AbstractController
             $this->entityManager->flush();
 
             return new JsonResponse(['message' => 'Day deleted'], Response::HTTP_NO_CONTENT);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }

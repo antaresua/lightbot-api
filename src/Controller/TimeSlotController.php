@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route('/api/timeslots')]
@@ -57,6 +58,7 @@ class TimeSlotController extends AbstractController
     public function show(int $id): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $timeSlot = $this->timeSlotRepository->find($id);
 
             if (!$timeSlot) {
@@ -73,6 +75,8 @@ class TimeSlotController extends AbstractController
             );
 
             return new JsonResponse($data, Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
@@ -82,6 +86,7 @@ class TimeSlotController extends AbstractController
     public function create(Request $request): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $data = $this->serializer->decode($request->getContent(), 'json');
 
             if (!is_array($data) || empty($data)) {
@@ -127,6 +132,8 @@ class TimeSlotController extends AbstractController
             $this->entityManager->flush();
 
             return new JsonResponse($createdTimeSlots, Response::HTTP_CREATED);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['message' => $e->getMessage()], 400);
         }
@@ -136,6 +143,7 @@ class TimeSlotController extends AbstractController
     public function update(int $id, Request $request): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $timeSlot = $this->timeSlotRepository->find($id);
 
             if (!$timeSlot) {
@@ -162,6 +170,8 @@ class TimeSlotController extends AbstractController
             );
 
             return new JsonResponse($data, Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
@@ -171,6 +181,7 @@ class TimeSlotController extends AbstractController
     public function delete(int $id): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $timeSlot = $this->timeSlotRepository->find($id);
 
             if (!$timeSlot) {
@@ -181,6 +192,8 @@ class TimeSlotController extends AbstractController
             $this->entityManager->flush();
 
             return new JsonResponse(['message' => 'TimeSlot deleted'], Response::HTTP_NO_CONTENT);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
@@ -190,6 +203,7 @@ class TimeSlotController extends AbstractController
     public function getByDay(int $dayOfWeek): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             // Validate dayOfWeek
             if ($dayOfWeek < 0 || $dayOfWeek > 6) {
                 return new JsonResponse(['message' => 'Invalid day of week'], Response::HTTP_BAD_REQUEST);
@@ -219,6 +233,8 @@ class TimeSlotController extends AbstractController
             }
 
             return new JsonResponse($result, Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }

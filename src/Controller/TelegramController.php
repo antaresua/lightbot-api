@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 
 class TelegramController extends AbstractController
@@ -28,9 +29,12 @@ class TelegramController extends AbstractController
         $message = '⚠️ Канал зупинено на технічне обслуговування\.';
 
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $this->telegramService->sendMessage($message);
 
             return new JsonResponse(['message' => 'Channel set to maintenance mode.'], Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $exception) {
             $this->logger->error('Failed to send Telegram message: ' . $exception->getMessage());
 
@@ -44,9 +48,12 @@ class TelegramController extends AbstractController
         $message = '✅ Роботу каналу відновлено\.';
 
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $this->telegramService->sendMessage($message);
 
             return new JsonResponse(['message' => 'Channel restored.'], Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $exception) {
             $this->logger->error('Failed to send Telegram message: ' . $exception->getMessage());
 

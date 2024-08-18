@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
@@ -47,6 +48,7 @@ class StatusController extends AbstractController
     public function lightOn(): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $lastStatus = $this->statusRepository->findLastLightOffStatus();
             $this->addStatus(true);
 
@@ -71,6 +73,8 @@ class StatusController extends AbstractController
             $this->telegramService->sendMessage($message);
 
             return new JsonResponse(['message' => 'Light turned on'], Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -80,6 +84,7 @@ class StatusController extends AbstractController
     public function lightOff(): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $lastStatus = $this->statusRepository->findLastLightOnStatus();
             $this->addStatus(false);
 
@@ -104,6 +109,8 @@ class StatusController extends AbstractController
             $this->telegramService->sendMessage($message);
 
             return new JsonResponse(['message' => 'Light turned off'], Response::HTTP_OK);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -221,6 +228,7 @@ class StatusController extends AbstractController
     public function getStatusesForDateRange(Request $request): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $data       = $this->serializer->deserialize($request->getContent(), DateRangeDTO::class, 'json');
             $statuses   = $this->statusRepository->findByDateRange($data->getStartDate(), $data->getEndDate());
             $statusDTOs = array_map(fn ($status) => new StatusDTO(
@@ -230,6 +238,8 @@ class StatusController extends AbstractController
             ), $statuses);
 
             return new JsonResponse($statusDTOs, Response::HTTP_OK, [], true);
+        } catch (AccessDeniedException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }

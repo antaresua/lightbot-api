@@ -15,7 +15,12 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     libcurl4-openssl-dev \
     libicu-dev \
+    tzdata \
     && docker-php-ext-install pdo pdo_mysql zip bcmath ctype iconv mbstring xml curl intl
+
+# Налаштування часового поясу
+ENV TZ=Europe/Kyiv
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Встановлення Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

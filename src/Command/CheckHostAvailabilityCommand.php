@@ -19,10 +19,13 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Console\Command\LockableTrait;
 
 #[AsCommand(name: 'app:check-host-availability')]
 class CheckHostAvailabilityCommand extends Command
 {
+    use LockableTrait;
+
     private const int CHECK_INTERVAL = 10;
     private const string STATUS_ON = 'on';
     private const string STATUS_OFF = 'off';
@@ -61,6 +64,11 @@ class CheckHostAvailabilityCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        if (!$this->lock()) {
+            $this->logger->warning('The command is already running in another process.');
+            return Command::FAILURE;
+        }
+
         $host = $input->getArgument('host');
         $port = $input->getArgument('port');
         $url = "http://$host:$port";
@@ -73,6 +81,8 @@ class CheckHostAvailabilityCommand extends Command
         }
 
         $this->loop->run();
+
+        $this->release(); // Release the lock when the command is finished
 
         return Command::SUCCESS;
     }

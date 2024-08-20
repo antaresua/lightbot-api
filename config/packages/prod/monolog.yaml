@@ -5,6 +5,7 @@ monolog:
             path: '%kernel.logs_dir%/%kernel.environment%.log'
             level: error
             channels: ['!event']
+            excluded_http_codes: [404]
         # Можна додати додаткові обробники, якщо потрібно
         # Наприклад, для логування в сторонні сервіси або системи
         # syslog:

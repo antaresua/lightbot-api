@@ -133,11 +133,14 @@ class StatusController extends AbstractController
         return implode(' ', $parts);
     }
 
+    /**
+     * @throws \Exception
+     */
     private function addStatus(bool $isOn): void
     {
         $lightStatus = new Status();
         $lightStatus->setIsOn($isOn);
-        $lightStatus->setCreatedAt(new \DateTimeImmutable());
+        $lightStatus->setCreatedAt(new \DateTimeImmutable('now', new \DateTimeZone('Europe/Kyiv')));
 
         $this->em->persist($lightStatus);
         $this->em->flush();

@@ -23,7 +23,7 @@ services:
             MYSQL_USER: lightbot
             MYSQL_PASSWORD: lightbot_password
         volumes:
-            - db-data:/var/lib/mysql
+            - data:/var/lib/mysql
         networks:
             - lightbot
         ports:
@@ -41,4 +41,4 @@ networks:
         driver: bridge
 
 volumes:
-    db-data:
+    data:

@@ -1,21 +1,21 @@
-version: '3.3'
-
 services:
     app-back:
         build:
             context: .
             dockerfile: Dockerfile
-        container_name: lightbot-back
+        container_name: lightbot-app
         environment:
             APP_ENV: prod
-            DATABASE_URL: mysql://lightbot:lightbot_password@mysql:3306/lightbot
-        ports:
-            - "9000:9000"
+            DATABASE_URL: mysql://lightbot:lightbot_password@app-db/lightbot
+        depends_on:
+            app-db:
+                condition: service_healthy
+        restart: unless-stopped
         networks:
             - lightbot
 
-    mysql:
-        image: mysql:8.0
+    app-db:
+        image: mysql:8.4
         container_name: lightbot-db
         environment:
             MYSQL_ROOT_PASSWORD: root_password
@@ -23,15 +23,22 @@ services:
             MYSQL_USER: lightbot
             MYSQL_PASSWORD: lightbot_password
         volumes:
-            - mysql_data:/var/lib/mysql
-        ports:
-            - "3306:3306"
+            - db-data:/var/lib/mysql
         networks:
             - lightbot
+        ports:
+            - "3306:3306"
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
 
 networks:
     lightbot:
-        external: true
+        driver: bridge
 
 volumes:
-    mysql_data:
+    db-data:

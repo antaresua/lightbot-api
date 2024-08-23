@@ -24,11 +24,13 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\SerializerInterface;
 
+#[Route('/api/light')]
 class StatusController extends AbstractController
 {
-    private const int TYPE_OFF   = 0;
-    private const int TYPE_ON    = 1;
+    private const int TYPE_OFF = 0;
+    private const int TYPE_ON = 1;
     private const int TYPE_ERROR = 2;
+
     private readonly SerializerInterface $serializer;
 
     public function __construct(
@@ -44,7 +46,7 @@ class StatusController extends AbstractController
         );
     }
 
-    #[Route('/api/light/on', name: 'light_on', methods: ['POST'])]
+    #[Route('/on', name: 'light_on', methods: ['POST'])]
     public function lightOn(): JsonResponse
     {
         try {
@@ -53,8 +55,8 @@ class StatusController extends AbstractController
             $this->addStatus(true);
 
             $currentDateTime = new \DateTime('now', new \DateTimeZone('Europe/Kyiv'));
-            $lastChangedAt   = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
-            $duration        = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
+            $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
+            $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
             $nextEvent = $this->lightScheduleService->getNextEventData($currentDateTime, true);
 
@@ -80,7 +82,7 @@ class StatusController extends AbstractController
         }
     }
 
-    #[Route('/api/light/off', name: 'light_off', methods: ['POST'])]
+    #[Route('off', name: 'light_off', methods: ['POST'])]
     public function lightOff(): JsonResponse
     {
         try {
@@ -89,8 +91,8 @@ class StatusController extends AbstractController
             $this->addStatus(false);
 
             $currentDateTime = new \DateTime('now', new \DateTimeZone('Europe/Kyiv'));
-            $lastChangedAt   = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
-            $duration        = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
+            $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
+            $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
             $nextEvent = $this->lightScheduleService->getNextEventData($currentDateTime, false);
 
@@ -188,7 +190,7 @@ class StatusController extends AbstractController
         return 'Щось зламалось. Адмін уже займається питанням...';
     }
 
-    #[Route('/api/light/status', name: 'light_status', methods: ['GET'])]
+    #[Route('/status', name: 'light_status', methods: ['GET'])]
     public function getStatus(): JsonResponse
     {
         try {
@@ -210,11 +212,11 @@ class StatusController extends AbstractController
         }
     }
 
-    #[Route('/api/light/statuses', name: 'light_statuses', methods: ['GET'])]
+    #[Route('/statuses', name: 'light_statuses', methods: ['GET'])]
     public function getStatuses(): JsonResponse
     {
         try {
-            $statuses   = $this->statusRepository->findBy([], ['createdAt' => 'DESC']);
+            $statuses = $this->statusRepository->findBy([], ['createdAt' => 'DESC']);
             $statusDTOs = array_map(fn ($status) => new StatusDTO(
                 $status->getId(),
                 $status->isOn() ? 'on' : 'off',
@@ -227,13 +229,13 @@ class StatusController extends AbstractController
         }
     }
 
-    #[Route('/api/light/statuses/range', name: 'light_statuses_range', methods: ['POST'])]
+    #[Route('/statuses/range', name: 'light_statuses_range', methods: ['POST'])]
     public function getStatusesForDateRange(Request $request): JsonResponse
     {
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
-            $data       = $this->serializer->deserialize($request->getContent(), DateRangeDTO::class, 'json');
-            $statuses   = $this->statusRepository->findByDateRange($data->getStartDate(), $data->getEndDate());
+            $data = $this->serializer->deserialize($request->getContent(), DateRangeDTO::class, 'json');
+            $statuses = $this->statusRepository->findByDateRange($data->getStartDate(), $data->getEndDate());
             $statusDTOs = array_map(fn ($status) => new StatusDTO(
                 $status->getId(),
                 $status->isOn() ? 'on' : 'off',

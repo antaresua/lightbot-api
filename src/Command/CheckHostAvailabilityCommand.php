@@ -14,12 +14,12 @@ use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\Console\Command\LockableTrait;
 
 #[AsCommand(name: 'app:check-host-availability')]
 class CheckHostAvailabilityCommand extends Command
@@ -29,22 +29,28 @@ class CheckHostAvailabilityCommand extends Command
     private const int CHECK_INTERVAL = 10;
     private const string STATUS_ON = 'on';
     private const string STATUS_OFF = 'off';
+
     private ?TimerInterface $timerId = null;
+
     private bool $unableToConnectLastTime = false;
+
     private string $apiStatusUrl;
+
     private string $apiChangeStatusUrl;
+
     private string $apiAuthUrl;
+
     private string $username;
+
     private string $password;
 
     public function __construct(
         private readonly SerializerInterface $serializer,
-        private readonly ClientInterface     $httpClient,
-        private readonly LoggerInterface     $logger,
-        private readonly LoopInterface       $loop,
-        ParameterBagInterface                $params,
-    )
-    {
+        private readonly ClientInterface $httpClient,
+        private readonly LoggerInterface $logger,
+        private readonly LoopInterface $loop,
+        ParameterBagInterface $params,
+    ) {
         parent::__construct();
 
         $this->apiStatusUrl = $params->get('api_status_url');
@@ -66,6 +72,7 @@ class CheckHostAvailabilityCommand extends Command
     {
         if (!$this->lock()) {
             $this->logger->warning('The command is already running in another process.');
+
             return Command::FAILURE;
         }
 
@@ -124,15 +131,15 @@ class CheckHostAvailabilityCommand extends Command
 
             return false;
         } catch (ServerException $e) {
-            $this->logger->error('Server error: ' . $e->getMessage());
+            $this->logger->error('Server error: '.$e->getMessage());
 
             return false;
         } catch (ClientException $e) {
-            $this->logger->error('Client error: ' . $e->getMessage());
+            $this->logger->error('Client error: '.$e->getMessage());
 
             return false;
         } catch (TransferException $e) {
-            $this->logger->error('Transfer error: ' . $e->getMessage());
+            $this->logger->error('Transfer error: '.$e->getMessage());
 
             return false;
         }
@@ -146,7 +153,7 @@ class CheckHostAvailabilityCommand extends Command
 
             return $data['status'] ?? null;
         } catch (TransferException $e) {
-            $this->logger->error('Error fetching current status: ' . $e->getMessage());
+            $this->logger->error('Error fetching current status: '.$e->getMessage());
 
             return null;
         }
@@ -154,7 +161,7 @@ class CheckHostAvailabilityCommand extends Command
 
     private function updateStatus(string $newStatus): void
     {
-        $url = $this->apiChangeStatusUrl . '/' . $newStatus;
+        $url = $this->apiChangeStatusUrl.'/'.$newStatus;
         $newStatus = strtoupper($newStatus);
 
         try {
@@ -167,7 +174,8 @@ class CheckHostAvailabilityCommand extends Command
             ]);
 
             if (200 !== $response->getStatusCode()) {
-                $this->logger->error("Failed to authenticate. Response code: " . $response->getStatusCode());
+                $this->logger->error('Failed to authenticate. Response code: '.$response->getStatusCode());
+
                 return;
             }
 
@@ -176,11 +184,12 @@ class CheckHostAvailabilityCommand extends Command
 
             if (!$token) {
                 $this->logger->error('Authentication failed: No token received.');
+
                 return;
             }
             $response = $this->httpClient->request('POST', $url, [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $token,
+                    'Authorization' => 'Bearer '.$token,
                 ],
             ]);
 
@@ -188,10 +197,10 @@ class CheckHostAvailabilityCommand extends Command
             if (200 === $statusCode) {
                 $this->logger->info("Status updated to $newStatus successfully.");
             } else {
-                $this->logger->error("Failed to update status to $newStatus. Response code: " . $statusCode);
+                $this->logger->error("Failed to update status to $newStatus. Response code: ".$statusCode);
             }
         } catch (TransferException $e) {
-            $this->logger->error("Failed to update status to $newStatus: " . $e->getMessage());
+            $this->logger->error("Failed to update status to $newStatus: ".$e->getMessage());
         }
     }
 }

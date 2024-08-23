@@ -31,7 +31,7 @@ class DayController extends AbstractController
     {
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
-            $days     = $this->dayRepository->findAll();
+            $days = $this->dayRepository->findAll();
             $daysDTOs = array_map(fn ($day) => new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName()), $days);
 
             return new JsonResponse($daysDTOs, Response::HTTP_OK);

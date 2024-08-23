@@ -9,9 +9,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 #[AsCommand(
@@ -46,6 +44,7 @@ class CreateUserCommand extends Command
 
         if ($existingUser) {
             $output->writeln('<error>User with this email already exists!</error>');
+
             return Command::FAILURE;
         }
 
@@ -53,7 +52,7 @@ class CreateUserCommand extends Command
         $user = new User();
         $user->setEmail($email);
 
-        if ($input->getArgument('role') === 'admin') {
+        if ('admin' === $input->getArgument('role')) {
             $user->setRoles(['ROLE_ADMIN', 'ROLE_USER']);
         } else {
             $user->setRoles(['ROLE_USER']);

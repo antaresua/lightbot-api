@@ -35,7 +35,7 @@ class TimeSlotController extends AbstractController
     {
         try {
             $timeSlots = $this->timeSlotRepository->findAll();
-            $result    = [];
+            $result = [];
             foreach ($timeSlots as $timeSlot) {
                 $item = new TimeSlotDTO(
                     $timeSlot->getId(),
@@ -94,7 +94,7 @@ class TimeSlotController extends AbstractController
             }
 
             $createdTimeSlots = [];
-            $errors           = [];
+            $errors = [];
 
             foreach ($data as $index => $timeSlotData) {
                 if (!isset($timeSlotData['startTime'], $timeSlotData['endTime'], $timeSlotData['startDay'], $timeSlotData['endDay'], $timeSlotData['type'])) {
@@ -103,7 +103,7 @@ class TimeSlotController extends AbstractController
                 }
 
                 $startDay = $this->dayRepository->findOneBy(['dayOfWeek' => $timeSlotData['startDay']]);
-                $endDay   = $this->dayRepository->findOneBy(['dayOfWeek' => $timeSlotData['endDay']]);
+                $endDay = $this->dayRepository->findOneBy(['dayOfWeek' => $timeSlotData['endDay']]);
 
                 if (!$startDay || !$endDay) {
                     $errors[] = ['index' => $index, 'message' => 'Invalid day reference'];

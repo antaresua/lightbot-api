@@ -36,13 +36,14 @@ class NotifyMaintenanceCommand extends Command
             default => null,
         };
 
-        if ($message === null) {
+        if (null === $message) {
             $output->writeln('Невідомий статус. Використовуйте "maintenance" або "restored".');
+
             return Command::FAILURE;
         }
 
         $this->telegramService->sendMessage($message);
-        $output->writeln('Повідомлення відправлено: ' . $message);
+        $output->writeln('Повідомлення відправлено: '.$message);
 
         return Command::SUCCESS;
     }

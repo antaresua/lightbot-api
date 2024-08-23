@@ -13,17 +13,16 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
-
+#[Route('/api/telegram', name: 'telegram')]
 class TelegramController extends AbstractController
 {
     public function __construct(
         private readonly LoggerInterface $logger,
         private readonly TelegramService $telegramService
     ) {
-
     }
 
-    #[Route('/api/telegram/maintenance/on', name: 'api_telegram_set_maintenance', methods: ['POST'])]
+    #[Route('/maintenance/on', name: 'api_telegram_set_maintenance', methods: ['POST'])]
     public function setMaintenance(): JsonResponse
     {
         $message = '⚠️ Канал зупинено на технічне обслуговування\.';
@@ -36,13 +35,13 @@ class TelegramController extends AbstractController
         } catch (AccessDeniedException $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $exception) {
-            $this->logger->error('Failed to send Telegram message: ' . $exception->getMessage());
+            $this->logger->error('Failed to send Telegram message: '.$exception->getMessage());
 
             return new JsonResponse(['error' => $exception->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    #[Route('/api/telegram/maintenance/off', name: 'api_telegram_restore_service', methods: ['POST'])]
+    #[Route('/maintenance/off', name: 'api_telegram_restore_service', methods: ['POST'])]
     public function restoreService(): JsonResponse
     {
         $message = '✅ Роботу каналу відновлено\.';
@@ -55,13 +54,13 @@ class TelegramController extends AbstractController
         } catch (AccessDeniedException $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $exception) {
-            $this->logger->error('Failed to send Telegram message: ' . $exception->getMessage());
+            $this->logger->error('Failed to send Telegram message: '.$exception->getMessage());
 
             return new JsonResponse(['error' => $exception->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    #[Route('/api/telegram/run-check-host', name: 'api_telegram_run_check_host', methods: ['POST'])]
+    #[Route('/run-check-host', name: 'api_telegram_run_check_host', methods: ['POST'])]
     public function checkHostAvailability(): JsonResponse
     {
         $process = new Process(['php', 'bin/console', 'app:check-host-availability', '194.28.102.52', '555']);

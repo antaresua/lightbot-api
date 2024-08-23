@@ -16,14 +16,14 @@ class LightScheduleService
 
     public function getNextEventData(\DateTimeInterface $currentTime, bool $isLightOn): array
     {
-        $dayOfWeek     = (int) $currentTime->format('w');
+        $dayOfWeek = (int) $currentTime->format('w');
         $timeFormatted = $currentTime->format('H:i:s');
 
         if ($isLightOn) {
             $nextOffEvent = $this->findNextEvent($dayOfWeek, TimeSlot::TYPE_OFF, $timeFormatted);
-            $nextOnEvent  = null;
+            $nextOnEvent = null;
 
-            if ($nextOffEvent !== null) {
+            if (null !== $nextOffEvent) {
                 $nextOnEvent = $this->findNextEvent(
                     $nextOffEvent->getStartDay()->getDayOfWeek(),
                     TimeSlot::TYPE_ON,
@@ -33,22 +33,22 @@ class LightScheduleService
 
             return [
                 'nextOffTimeStart' => $nextOffEvent?->getStartTime()?->format('H:i') ?? null,
-                'nextOffTimeEnd'   => $nextOnEvent?->getStartTime()?->format('H:i')  ?? null,
+                'nextOffTimeEnd' => $nextOnEvent?->getStartTime()?->format('H:i') ?? null,
             ];
         }
 
         $nextPossibleOnEvent = $this->findNextEvent($dayOfWeek, TimeSlot::TYPE_POSSIBLE_ON, $timeFormatted);
-        $nextOnEvent         = null;
-        $nextOffEvent        = null;
+        $nextOnEvent = null;
+        $nextOffEvent = null;
 
-        if ($nextPossibleOnEvent !== null) {
+        if (null !== $nextPossibleOnEvent) {
             $nextOnEvent = $this->findNextEvent(
                 $nextPossibleOnEvent->getStartDay()->getDayOfWeek(),
                 TimeSlot::TYPE_ON,
                 $nextPossibleOnEvent->getStartTime()->format('H:i:s')
             );
 
-            if ($nextOnEvent !== null) {
+            if (null !== $nextOnEvent) {
                 $nextOffEvent = $this->findNextEvent(
                     $nextOnEvent->getStartDay()->getDayOfWeek(),
                     TimeSlot::TYPE_OFF,
@@ -58,10 +58,10 @@ class LightScheduleService
         }
 
         return [
-            'nextPossibleOnStart'   => $nextPossibleOnEvent?->getStartTime()?->format('H:i') ?? null,
-            'nextPossibleOnEnd'     => $nextOnEvent?->getStartTime()?->format('H:i')         ?? null,
-            'nextGuaranteedOnStart' => $nextOnEvent?->getStartTime()?->format('H:i')         ?? null,
-            'nextGuaranteedOnEnd'   => $nextOffEvent?->getStartTime()?->format('H:i')        ?? null,
+            'nextPossibleOnStart' => $nextPossibleOnEvent?->getStartTime()?->format('H:i') ?? null,
+            'nextPossibleOnEnd' => $nextOnEvent?->getStartTime()?->format('H:i') ?? null,
+            'nextGuaranteedOnStart' => $nextOnEvent?->getStartTime()?->format('H:i') ?? null,
+            'nextGuaranteedOnEnd' => $nextOffEvent?->getStartTime()?->format('H:i') ?? null,
         ];
     }
 
@@ -86,8 +86,8 @@ class LightScheduleService
         $interval = $endTime->diff($startTime);
 
         return [
-            'days'    => $interval->d,
-            'hours'   => $interval->h,
+            'days' => $interval->d,
+            'hours' => $interval->h,
             'minutes' => $interval->i,
         ];
     }

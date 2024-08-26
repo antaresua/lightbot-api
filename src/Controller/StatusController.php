@@ -30,6 +30,7 @@ class StatusController extends AbstractController
     private const int TYPE_OFF = 0;
     private const int TYPE_ON = 1;
     private const int TYPE_ERROR = 2;
+    private const string TIMEZONE = 'Europe/Kyiv';
 
     private readonly SerializerInterface $serializer;
 
@@ -54,8 +55,9 @@ class StatusController extends AbstractController
             $lastStatus = $this->statusRepository->findLastLightOffStatus();
             $this->addStatus(true);
 
-            $currentDateTime = new \DateTime('now', new \DateTimeZone('Europe/Kyiv'));
+            $currentDateTime = new \DateTime('now', new \DateTimeZone(self::TIMEZONE));
             $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
+            $lastChangedAt->setTimezone(new \DateTimeZone(self::TIMEZONE));
             $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
             $nextEvent = $this->lightScheduleService->getNextEventData($currentDateTime, true);
@@ -82,7 +84,7 @@ class StatusController extends AbstractController
         }
     }
 
-    #[Route('off', name: 'light_off', methods: ['POST'])]
+    #[Route('/off', name: 'light_off', methods: ['POST'])]
     public function lightOff(): JsonResponse
     {
         try {
@@ -90,8 +92,9 @@ class StatusController extends AbstractController
             $lastStatus = $this->statusRepository->findLastLightOnStatus();
             $this->addStatus(false);
 
-            $currentDateTime = new \DateTime('now', new \DateTimeZone('Europe/Kyiv'));
+            $currentDateTime = new \DateTime('now', new \DateTimeZone(self::TIMEZONE));
             $lastChangedAt = $lastStatus ? $lastStatus->getCreatedAt() : $currentDateTime;
+            $lastChangedAt->setTimezone(new \DateTimeZone(self::TIMEZONE));
             $duration = $this->lightScheduleService->calculateDuration($lastChangedAt, $currentDateTime);
 
             $nextEvent = $this->lightScheduleService->getNextEventData($currentDateTime, false);
@@ -142,7 +145,7 @@ class StatusController extends AbstractController
     {
         $lightStatus = new Status();
         $lightStatus->setIsOn($isOn);
-        $lightStatus->setCreatedAt(new \DateTimeImmutable('now', new \DateTimeZone('Europe/Kyiv')));
+        $lightStatus->setCreatedAt(new \DateTime());
 
         $this->em->persist($lightStatus);
         $this->em->flush();
@@ -195,6 +198,7 @@ class StatusController extends AbstractController
     {
         try {
             $lastStatus = $this->statusRepository->findLastStatus();
+            $lastStatus->getCreatedAt()->setTimezone(new \DateTimeZone(self::TIMEZONE));
 
             if (!$lastStatus) {
                 return new JsonResponse(['message' => 'No status available'], Response::HTTP_NOT_FOUND);
@@ -217,6 +221,9 @@ class StatusController extends AbstractController
     {
         try {
             $statuses = $this->statusRepository->findBy([], ['createdAt' => 'DESC']);
+            foreach ($statuses as $status) {
+                $status->getCreatedAt()->setTimezone(new \DateTimeZone(self::TIMEZONE));
+            }
             $statusDTOs = array_map(fn ($status) => new StatusDTO(
                 $status->getId(),
                 $status->isOn() ? 'on' : 'off',

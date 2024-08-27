@@ -156,7 +156,7 @@ class StatusController extends AbstractController
         if (self::TYPE_ON === $type) {
             if (isset($nextEvent['nextOffTimeStart'], $nextEvent['nextOffTimeEnd'])) {
                 return sprintf(
-                    "🟢 Світло з'явилося о *%s*\n🕓 Його не було *%s*\n📅 Наступне відключення: з *%s* по *%s*",
+                    "🟢 Світло з'явилося о *%s*\n🕓 Його не було *%s*\n📅 Наступне відключення за графіком: з *%s* по *%s*",
                     $currentDateTime->format('H:i'),
                     empty($duration) ? '0 хв' : $duration,
                     $nextEvent['nextOffTimeStart'],
@@ -173,7 +173,7 @@ class StatusController extends AbstractController
         if (self::TYPE_OFF === $type) {
             if (isset($nextEvent['nextGuaranteedOnStart'], $nextEvent['nextGuaranteedOnEnd'], $nextEvent['nextPossibleOnStart'], $nextEvent['nextPossibleOnEnd'])) {
                 return sprintf(
-                    "🔴 Світло зникло о *%s*\n🕓 Воно було *%s*\n🗓 Наступне включення: *%s* \- *%s*\n⚠️ Можливе включення з *%s* по *%s*",
+                    "🔴 Світло зникло о *%s*\n🕓 Воно було *%s*\n🗓 Наступне планове включення: *%s* \- *%s*\n⚠️ Можливе включення з *%s* по *%s*",
                     $currentDateTime->format('H:i'),
                     empty($duration) ? '0 хв' : $duration,
                     $nextEvent['nextGuaranteedOnStart'],

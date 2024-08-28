@@ -30,7 +30,6 @@ class DayController extends AbstractController
     public function index(): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $days = $this->dayRepository->findAll();
             $daysDTOs = array_map(fn ($day) => new DayDTO($day->getId(), $day->getDayOfWeek(), $day->getName()), $days);
 

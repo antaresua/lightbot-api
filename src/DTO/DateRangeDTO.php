@@ -6,8 +6,16 @@ namespace App\DTO;
 
 class DateRangeDTO
 {
-    public function __construct(public \DateTimeInterface $startDate, public \DateTimeInterface $endDate)
+    private \DateTimeInterface $startDate;
+    private \DateTimeInterface $endDate;
+
+    /**
+     * @throws \Exception
+     */
+    public function __construct(string $startDate, string $endDate)
     {
+        $this->startDate = new \DateTime($startDate);
+        $this->endDate = new \DateTime($endDate);
     }
 
     public function getStartDate(): \DateTimeInterface

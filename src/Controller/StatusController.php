@@ -248,7 +248,7 @@ class StatusController extends AbstractController
                 $status->getCreatedAt()->format('Y-m-d H:i:s'),
             ), $statuses);
 
-            return new JsonResponse($statusDTOs, Response::HTTP_OK, [], true);
+            return new JsonResponse($statusDTOs, Response::HTTP_OK);
         } catch (AccessDeniedException $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {

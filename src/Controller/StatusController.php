@@ -240,7 +240,6 @@ class StatusController extends AbstractController
     public function getStatusesForDateRange(Request $request): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $data = $this->serializer->deserialize($request->getContent(), DateRangeDTO::class, 'json');
             $statuses = $this->statusRepository->findByDateRange($data->getStartDate(), $data->getEndDate());
             $statusDTOs = array_map(fn ($status) => new StatusDTO(

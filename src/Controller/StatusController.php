@@ -242,6 +242,9 @@ class StatusController extends AbstractController
         try {
             $data = $this->serializer->deserialize($request->getContent(), DateRangeDTO::class, 'json');
             $statuses = $this->statusRepository->findByDateRange($data->getStartDate(), $data->getEndDate());
+            foreach ($statuses as $status) {
+                $status->getCreatedAt()->setTimezone(new \DateTimeZone(self::TIMEZONE));
+            }
             $statusDTOs = array_map(fn ($status) => new StatusDTO(
                 $status->getId(),
                 $status->isOn() ? 'on' : 'off',
